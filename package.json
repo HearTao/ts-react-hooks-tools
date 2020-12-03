@@ -1,10 +1,29 @@
 {
   "name": "ts-react-hooks-tools",
+  "license": "MIT License",
+  "author": {
+    "name": "Wenlu Wang",
+    "email": "kingwenlu@gmail.com",
+    "url": "https://github.com/kingwl"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HearTao/typescript-react-hooks-tools.git"
+  },
   "version": "0.0.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "dependencies": {
+  "scripts": {
+    "build": "tsc",
+    "lint": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx}",
+    "test:link": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
+    "prettier": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx} --write"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/react": "^17.0.0",
     "prettier": "^2.2.1",
-    "typescript": "^4.1.2"
+    "typescript": "^4.1.2",
+    "react": "^17.0.1"
   }
 }
