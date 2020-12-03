@@ -19,6 +19,8 @@ declare module 'typescript/lib/tsserverlibrary' {
         stopAtComments?: boolean
     ): number;
     export function isExpressionNode(node: Node): boolean;
+    export function skipParentheses(node: Expression): Expression;
+    export function skipParentheses(node: Node): Node;
 
     interface NodeFactory {
         cloneNode<T extends Node | undefined>(node: T): T;

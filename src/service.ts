@@ -29,7 +29,8 @@ import {
     cloneDeep,
     skipSingleValueDeclaration,
     isExpression,
-    wrapIntoJsxExpressionIfNeed
+    wrapIntoJsxExpressionIfNeed,
+    alreadyWrappedOrContainsInHooks
 } from './utils';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
@@ -163,6 +164,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             rawTopLevelNode
         );
         const checker = program.getTypeChecker();
+        if (alreadyWrappedOrContainsInHooks(ts, topLevelNode, checker)) {
+            this.logger?.log('Already has hooks');
+            return undefined;
+        }
 
         this.logger?.log('TopLevelKind: ' + topLevelNode.kind);
         if (isFunctionExpressionLike(ts, topLevelNode)) {
@@ -352,7 +357,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const references: DependExpression[] = [];
         const resolver = createDepSymbolResolver(ts, scope, file);
 
-        ts.forEachChild(scope, visitor);
+        visitor(scope);
         return references;
 
         function visitor(node: ts.Node) {
@@ -370,7 +375,6 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     }
                     return;
                 }
-
                 case ts.SyntaxKind.ElementAccessExpression:
                 case ts.SyntaxKind.PropertyAccessExpression: {
                     const accessExpression = node as
@@ -402,7 +406,6 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     }
                     return;
                 }
-
                 default:
                     ts.forEachChild(node, visitor);
             }
