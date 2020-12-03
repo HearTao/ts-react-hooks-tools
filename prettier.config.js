@@ -17,5 +17,6 @@ module.exports = {
 
     proseWrap: 'always',
 
-    arrowParens: 'avoid'
+    arrowParens: 'avoid',
+    endOfLine: 'crlf'
 };

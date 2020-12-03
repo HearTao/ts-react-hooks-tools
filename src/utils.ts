@@ -47,13 +47,15 @@ export function findTopLevelNodeInSelection(
     end: number,
     file: ts.SourceFile
 ) {
-    return typescript.findAncestor(token, node => {
+    let lastNode: ts.Node | undefined;
+    typescript.findAncestor(token, node => {
+        lastNode = node;
         if (
             !startEndContainsStartEndSkipTrivia(
                 typescript,
                 start,
                 end,
-                node.parent,
+                node,
                 file
             )
         ) {
@@ -61,6 +63,7 @@ export function findTopLevelNodeInSelection(
         }
         return false;
     });
+    return lastNode;
 }
 
 export function isInFunctionComponent(node: Node) {}
@@ -183,4 +186,116 @@ export function wrapIntoJsxExpressionIfNeed(
     return typescript.isJsxElement(node.parent)
         ? typescript.factory.createJsxExpression(undefined, newNode)
         : newNode;
+}
+
+export function skipParenthesesUp(
+    typescript: typeof ts,
+    node: ts.Node
+): ts.Node {
+    while (node.kind === typescript.SyntaxKind.ParenthesizedExpression) {
+        node = node.parent;
+    }
+    return node;
+}
+
+function alreadyWrappedInHooks(
+    typescript: typeof ts,
+    node: ts.Node,
+    checker: ts.TypeChecker
+): boolean {
+    const maybeHooks = typescript.findAncestor(node, parent => {
+        if (
+            !typescript.isCallExpression(parent) ||
+            !typescript.rangeContainsRange(parent.arguments, node)
+        ) {
+            return false;
+        }
+
+        const expression = typescript.skipParentheses(parent.expression);
+        const symbol = checker.getSymbolAtLocation(expression);
+        if (!symbol) {
+            return dummyCheckHooks(typescript, expression);
+        }
+
+        //TODO: check by declaration
+        return dummyCheckHooks(typescript, expression);
+    });
+
+    return !!maybeHooks;
+}
+
+function alreadyContainsHooks(
+    typescript: typeof ts,
+    node: ts.Node,
+    checker: ts.TypeChecker
+): boolean {
+    let maybeHooks = false;
+    visitor(node);
+    typescript.forEachChild(node, visitor);
+
+    return !!maybeHooks;
+
+    function visitor(child: ts.Node) {
+        if (typescript.isCallExpression(child)) {
+            const expression = typescript.skipParentheses(child.expression);
+            const symbol = checker.getSymbolAtLocation(expression);
+            if (!symbol && dummyCheckHooks(typescript, expression)) {
+                maybeHooks ||= true;
+                return true;
+            } else if (dummyCheckHooks(typescript, expression)) {
+                //TODO: check by declaration
+                maybeHooks ||= true;
+                return true;
+            }
+        }
+        typescript.forEachChild(child, visitor);
+    }
+}
+
+export function alreadyWrappedOrContainsInHooks(
+    typescript: typeof ts,
+    node: ts.Node,
+    checker: ts.TypeChecker
+) {
+    return (
+        alreadyWrappedInHooks(typescript, node, checker) ||
+        alreadyContainsHooks(typescript, node, checker)
+    );
+}
+
+export function compareIgnoreCase(a: string, b: string) {
+    return a.toLowerCase() === b.toLowerCase();
+}
+
+export function isReactText(s: string) {
+    return compareIgnoreCase(s, 'react');
+}
+
+export function isUseSomething(s: string) {
+    return s.toLowerCase().startsWith('use');
+}
+
+export function dummyCheckHooks(
+    typescript: typeof ts,
+    expression: ts.Expression
+): boolean {
+    if (typescript.isIdentifier(expression)) {
+        return isUseSomething(expression.text);
+    }
+    if (typescript.isPropertyAccessExpression(expression)) {
+        return (
+            typescript.isIdentifier(expression.expression) &&
+            isReactText(expression.expression.text) &&
+            isUseSomething(expression.name.text)
+        );
+    }
+    if (typescript.isElementAccessExpression(expression)) {
+        return (
+            typescript.isIdentifier(expression.expression) &&
+            typescript.isStringLiteralLike(expression.argumentExpression) &&
+            isReactText(expression.expression.text) &&
+            isUseSomething(expression.argumentExpression.text)
+        );
+    }
+    return false;
 }

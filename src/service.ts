@@ -29,7 +29,8 @@ import {
     cloneDeep,
     skipSingleValueDeclaration,
     isExpression,
-    wrapIntoJsxExpressionIfNeed
+    wrapIntoJsxExpressionIfNeed,
+    alreadyWrappedOrContainsInHooks
 } from './utils';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
@@ -163,6 +164,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             rawTopLevelNode
         );
         const checker = program.getTypeChecker();
+        if (alreadyWrappedOrContainsInHooks(ts, topLevelNode, checker)) {
+            this.logger?.log('Already has hooks');
+            return undefined;
+        }
 
         this.logger?.log('TopLevelKind: ' + topLevelNode.kind);
         if (isFunctionExpressionLike(ts, topLevelNode)) {
