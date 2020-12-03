@@ -1,5 +1,5 @@
   
-import { pluginName } from './config';
+import { pluginName } from './constants';
 
 export class LanguageServiceLogger {
     constructor(

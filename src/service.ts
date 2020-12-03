@@ -2,6 +2,7 @@ import type * as ts from 'typescript/lib/tsserverlibrary'
 
 import { ICustomizedLanguageServie } from './decorator'
 import { LanguageServiceLogger } from "./logger"
+import { refactorName, refactorDescriptions, wrapIntoUseContextActionName, wrapIntoUseContextActionDescription } from './constants'
 import { DependExpression, FunctionExpressionLike, Info, RefactorContext, RefactorKind } from "./types";
 import { findTopLevelNodeInSelection, isFunctionExpressionLike, functionExpressionLikeToExpression, getRangeOfPositionOrRange, isDef, createDepSymbolResolver, cloneDeep } from "./utils"
 
@@ -27,11 +28,11 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
 
         if (info.kind === RefactorKind.useCallback) {
             return [{
-                name: 'React hooks refactor',
-                description: 'React hooks refactor',
+                name: refactorName,
+                description: refactorDescriptions,
                 actions: [{
-                    name: 'Wrap into React.useCallback',
-                    description: 'Wrap into React.useCallback'
+                    name: wrapIntoUseContextActionName,
+                    description: wrapIntoUseContextActionDescription
                 }]
             }]
         }
@@ -55,7 +56,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             host: this.info.languageServiceHost,
             preferences: preferences || {}
         }
-        if (info.kind === RefactorKind.useCallback && actionName === 'Wrap into React.useCallback') {
+        if (info.kind === RefactorKind.useCallback && actionName === wrapIntoUseContextActionName) {
             return this.getEditsForConvertUseCallback(info, file, textChangesContext)
         }
 
