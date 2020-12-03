@@ -357,7 +357,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const references: DependExpression[] = [];
         const resolver = createDepSymbolResolver(ts, scope, file);
 
-        ts.forEachChild(scope, visitor);
+        visitor(scope);
         return references;
 
         function visitor(node: ts.Node) {
@@ -375,7 +375,6 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     }
                     return;
                 }
-
                 case ts.SyntaxKind.ElementAccessExpression:
                 case ts.SyntaxKind.PropertyAccessExpression: {
                     const accessExpression = node as
@@ -407,7 +406,6 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     }
                     return;
                 }
-
                 default:
                     ts.forEachChild(node, visitor);
             }

@@ -47,15 +47,13 @@ export function findTopLevelNodeInSelection(
     end: number,
     file: ts.SourceFile
 ) {
-    let lastNode: ts.Node | undefined;
-    typescript.findAncestor(token, node => {
-        lastNode = node;
+    return typescript.findAncestor(token, node => {
         if (
             !startEndContainsStartEndSkipTrivia(
                 typescript,
                 start,
                 end,
-                node,
+                node.parent,
                 file
             )
         ) {
@@ -63,7 +61,6 @@ export function findTopLevelNodeInSelection(
         }
         return false;
     });
-    return lastNode;
 }
 
 export function isInFunctionComponent(node: Node) {}
@@ -231,7 +228,6 @@ function alreadyContainsHooks(
 ): boolean {
     let maybeHooks = false;
     visitor(node);
-    typescript.forEachChild(node, visitor);
 
     return !!maybeHooks;
 
