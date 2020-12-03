@@ -1,4 +1,4 @@
-import 'typescript/lib/tsserverlibrary'
+import 'typescript/lib/tsserverlibrary';
 
 declare module 'typescript/lib/tsserverlibrary' {
     export namespace formatting {
@@ -76,11 +76,11 @@ declare module 'typescript/lib/tsserverlibrary' {
 
         export interface ConfigurableStartEnd
             extends ConfigurableStart,
-            ConfigurableEnd { }
+                ConfigurableEnd {}
 
         export interface ChangeNodeOptions
             extends ConfigurableStartEnd,
-            InsertNodeOptions { }
+                InsertNodeOptions {}
 
         export function applyChanges(
             text: string,
