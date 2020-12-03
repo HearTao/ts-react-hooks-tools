@@ -13,11 +13,13 @@ export type FunctionExpressionLike = MustHaveBody<
 
 export type DependExpression = ts.Identifier | ts.ElementAccessExpression | ts.PropertyAccessExpression
 
-export interface Info {
-    kind: RefactorKind
+export interface UseCallbackInfo {
+    kind: RefactorKind.useCallback
     func: FunctionExpressionLike;
     deps: DependExpression[]
 }
+
+export type Info = UseCallbackInfo
 
 export interface RefactorContext {
     program: ts.Program

@@ -6,8 +6,13 @@ interface IProps {
 
 export const a: React.FC<IProps> = props => {
 
+    const alert = () => {
+        window.alert('foo')
+    }
+
     const onClick = () => {
         console.log(props.foo)
+        alert()
     }
 
     return (

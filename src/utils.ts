@@ -29,6 +29,10 @@ export function findTopLevelNodeInSelection (typescript: typeof ts, token: ts.No
     })
 }
 
+export function isInFunctionComponent (node: Node) {
+
+}
+
 export function functionExpressionLikeToExpression (typescript: typeof ts, func: FunctionExpressionLike): Exclude<FunctionExpressionLike, ts.FunctionDeclaration> {
     switch (func.kind) {
         case typescript.SyntaxKind.FunctionDeclaration:
