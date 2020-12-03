@@ -53,7 +53,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const textChangesContext: ts.textChanges.TextChangesContext = {
             formatContext,
             host: this.info.languageServiceHost,
-            preferences: {}
+            preferences: preferences || {}
         }
         if (info.kind === RefactorKind.useCallback && actionName === 'Wrap into React.useCallback') {
             return this.getEditsForConvertUseCallback(info, file, textChangesContext)
