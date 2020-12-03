@@ -11,6 +11,13 @@ export function assertDef<T>(v: T | undefined | null): asserts v is T {
     }
 }
 
+export function first<T>(v: readonly T[]): T {
+    if (v.length === 0) {
+        throw new Error('Index out of range')
+    }
+    return v[0]
+}
+
 export function getRangeOfPositionOrRange (positionOrRange: number | ts.TextRange) {
     const [startPosition, endPosition] = typeof positionOrRange === "number" ? [positionOrRange, undefined] : [positionOrRange.pos, positionOrRange.end];
     return [startPosition, endPosition] as const;
@@ -98,4 +105,26 @@ export function cloneDeep(typescript: typeof ts, v: ts.Node): ts.Node {
             )
         }
     }]).transformed[0]
+}
+
+export function skipSingleValueDeclaration(typescript: typeof ts, node: ts.Node): ts.Node {
+    const original = node;
+    if (typescript.isVariableStatement(node)) {
+        node = node.declarationList
+    }
+    if (typescript.isVariableDeclarationList(node) && node.declarations.length === 1) {
+        node = first(node.declarations)
+    }
+    if (typescript.isVariableDeclaration(node) && node.initializer) {
+        return node.initializer;
+    }
+    return original;
+}
+
+export function isExpression(typescript: typeof ts, node: ts.Node): node is ts.Expression {
+    return typescript.isExpressionNode(node)
+}
+
+export function wrapIntoJsxExpressionIfNeed(typescript: typeof ts, node: ts.Node, newNode: ts.Expression) {
+    return typescript.isJsxElement(node.parent) ? typescript.factory.createJsxExpression(undefined, newNode) : newNode
 }
