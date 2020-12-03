@@ -2,9 +2,9 @@ import type * as ts from 'typescript/lib/tsserverlibrary'
 
 import { ICustomizedLanguageServie } from './decorator'
 import { LanguageServiceLogger } from "./logger"
-import { refactorName, refactorDescriptions, wrapIntoUseContextActionName, wrapIntoUseContextActionDescription } from './constants'
-import { DependExpression, FunctionExpressionLike, Info, RefactorContext, RefactorKind } from "./types";
-import { findTopLevelNodeInSelection, isFunctionExpressionLike, functionExpressionLikeToExpression, getRangeOfPositionOrRange, isDef, createDepSymbolResolver, cloneDeep } from "./utils"
+import { refactorName, refactorDescriptions, wrapIntoUseContextActionName, wrapIntoUseContextActionDescription, wrapIntoUseMemoActionName, wrapIntoUseMemoActionDescription } from './constants'
+import { DependExpression, FunctionExpressionLike, Info, RefactorContext, RefactorKind, UseCallbackInfo, UseMemoInfo } from "./types";
+import { findTopLevelNodeInSelection, isFunctionExpressionLike, functionExpressionLikeToExpression, getRangeOfPositionOrRange, isDef, createDepSymbolResolver, cloneDeep, skipSingleValueDeclaration, isExpression, wrapIntoJsxExpressionIfNeed } from "./utils"
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
     constructor(
@@ -36,6 +36,16 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 }]
             }]
         }
+        if (info.kind === RefactorKind.useMemo) {
+            return [{
+                name: refactorName,
+                description: refactorDescriptions,
+                actions: [{
+                    name: wrapIntoUseMemoActionName,
+                    description: wrapIntoUseMemoActionDescription
+                }]
+            }]
+        }
         return []
     }
 
@@ -59,6 +69,9 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         if (info.kind === RefactorKind.useCallback && actionName === wrapIntoUseContextActionName) {
             return this.getEditsForConvertUseCallback(info, file, textChangesContext)
         }
+        if (info.kind === RefactorKind.useMemo && actionName === wrapIntoUseMemoActionName) {
+            return this.getEditsForConvertUseMemo(info, file, textChangesContext)
+        }
 
         return undefined
     }
@@ -67,20 +80,37 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const ts = this.typescript;
 
         const startToken = ts.getTokenAtPosition(file, startPosition);
-        const topLevelNode = findTopLevelNodeInSelection(ts, startToken, startPosition, endPosition, file);
-        if (!topLevelNode) return undefined;
+        const rawTopLevelNode = findTopLevelNodeInSelection(ts, startToken, startPosition, endPosition, file);
+        if (!rawTopLevelNode) return undefined;
 
+        const topLevelNode = skipSingleValueDeclaration(this.typescript, rawTopLevelNode);
         const checker = program.getTypeChecker();
+
+        this.logger?.log('TopLevelKind: ' + topLevelNode.kind)
         if (isFunctionExpressionLike(ts, topLevelNode)) {
             return this.getInfoFromFunctionExpressionLike(topLevelNode, file, checker);
         }
 
-        return undefined;
+        if (isExpression(ts, topLevelNode)) {
+            return this.getInfoFromUniversalExpression(topLevelNode, file, checker);
+        }
+
+        return undefined
     }
 
-    getInfoFromFunctionExpressionLike(func: FunctionExpressionLike, file: ts.SourceFile, checker: ts.TypeChecker): Info | undefined {
+    getInfoFromUniversalExpression(expression: ts.Expression, file: ts.SourceFile, checker: ts.TypeChecker): Info {
+        const deps = this.getOutsideReferences(expression, file, checker);
+        this.logger?.log("Universal Deps: " + deps.length)
+        return {
+            kind: RefactorKind.useMemo,
+            expression,
+            deps
+        }
+    }
+
+    getInfoFromFunctionExpressionLike(func: FunctionExpressionLike, file: ts.SourceFile, checker: ts.TypeChecker): Info {
         const deps = this.getOutsideReferences(func.body, file, checker);
-        this.logger?.log("Deps: " + deps.length)
+        this.logger?.log("Function Deps: " + deps.length)
         return {
             kind: RefactorKind.useCallback,
             func,
@@ -88,7 +118,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         }
     }
 
-    getEditsForConvertUseCallback(info: Info, file: ts.SourceFile, textChangesContext: ts.textChanges.TextChangesContext): ts.RefactorEditInfo {
+    getEditsForConvertUseCallback(info: UseCallbackInfo, file: ts.SourceFile, textChangesContext: ts.textChanges.TextChangesContext): ts.RefactorEditInfo {
         const { deps, func } = info
 
         const edits = this.typescript.textChanges.ChangeTracker.with(textChangesContext, changeTracker => {
@@ -104,10 +134,26 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         }
     }
 
+    getEditsForConvertUseMemo(info: UseMemoInfo, file: ts.SourceFile, textChangesContext: ts.textChanges.TextChangesContext): ts.RefactorEditInfo {
+        const { deps, expression } = info
+
+        const edits = this.typescript.textChanges.ChangeTracker.with(textChangesContext, changeTracker => {
+            changeTracker.replaceNode(
+                file,
+                expression,
+                this.wrapIntoUseMemo(expression, deps)
+            )
+        })
+
+        return {
+            edits
+        }
+    }
+
     wrapIntoUseCallback(expression: FunctionExpressionLike, deps: DependExpression[]) {
         const factory = this.typescript.factory;
 
-        const useCallback = factory.createCallExpression(
+        const useCallbackCall = factory.createCallExpression(
             factory.createPropertyAccessExpression(
                 factory.createIdentifier("React"),
                 factory.createIdentifier("useCallback")
@@ -121,7 +167,34 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 )
             ]
         )
-        return useCallback
+        return useCallbackCall
+    }
+
+    wrapIntoUseMemo(expression: ts.Expression, deps: DependExpression[]) {
+        const factory = this.typescript.factory;
+
+        const useMemoCall = factory.createCallExpression(
+            factory.createPropertyAccessExpression(
+                factory.createIdentifier("React"),
+                factory.createIdentifier("useMemo")
+            ),
+            undefined,
+            [
+                factory.createArrowFunction(
+                    undefined,
+                    undefined,
+                    [],
+                    undefined,
+                    undefined,
+                    expression
+                ),
+                factory.createArrayLiteralExpression(
+                    deps.map(dep => cloneDeep(this.typescript, dep) as DependExpression),
+                    false
+                )
+            ]
+        )
+        return wrapIntoJsxExpressionIfNeed(this.typescript, expression, useMemoCall)
     }
 
     getRefactorContext(fileName: string): RefactorContext | undefined {

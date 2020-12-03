@@ -15,11 +15,17 @@ export type DependExpression = ts.Identifier | ts.ElementAccessExpression | ts.P
 
 export interface UseCallbackInfo {
     kind: RefactorKind.useCallback
-    func: FunctionExpressionLike;
+    func: FunctionExpressionLike
     deps: DependExpression[]
 }
 
-export type Info = UseCallbackInfo
+export interface UseMemoInfo {
+    kind: RefactorKind.useMemo
+    expression: ts.Expression
+    deps: DependExpression[]
+}
+
+export type Info = UseCallbackInfo | UseMemoInfo
 
 export interface RefactorContext {
     program: ts.Program

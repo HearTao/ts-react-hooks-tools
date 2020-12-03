@@ -6,6 +6,8 @@ interface IProps {
 
 export const a: React.FC<IProps> = props => {
 
+    const value = props.foo + 1
+
     const alert = () => {
         window.alert('foo')
     }
@@ -17,7 +19,8 @@ export const a: React.FC<IProps> = props => {
 
     return (
         <div onClick={onClick}>
-
+            <span>{value}</span>
+            <p>123</p>
         </div>
     )
 }
