@@ -1,0 +1,1 @@
+export const pluginName = 'ts-react-hooks-tools-plugin';
