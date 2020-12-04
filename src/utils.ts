@@ -181,12 +181,15 @@ export function isInFunctionComponent(
     const globalJsxElementType = getGlobalJsxElementType(typescript, checker);
     if (!globalJsxElementType) return Ternary.Maybe;
 
-    const maybeFC = typescript.findAncestor(node, parent => {
+    const maybeFC = typescript.findAncestor(node.parent, parent => {
         if (isFunctionExpressionLike(typescript, parent)) {
             return (
                 maybeCustomHooks(typescript, parent) ||
                 isFunctionComponentLike(parent, checker, globalJsxElementType)
             );
+        }
+        if (typescript.isClassLike(parent)) {
+            return 'quit';
         }
         return false;
     });
