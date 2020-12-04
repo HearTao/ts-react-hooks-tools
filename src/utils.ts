@@ -268,6 +268,28 @@ export function isDeclarationAssignedByUseState(
     return false;
 }
 
+export function isDeclarationDefinitelyConstants(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    if (
+        typescript.isEnumDeclaration(declaration) ||
+        typescript.isEnumMember(declaration)
+    ) {
+        return true;
+    }
+    if (
+        typescript.isVariableDeclaration(declaration) &&
+        typescript.getCombinedNodeFlags(declaration) &
+            typescript.NodeFlags.Const &&
+        declaration.initializer &&
+        typescript.isLiteralExpression(declaration.initializer)
+    ) {
+        return true;
+    }
+    return;
+}
+
 export function createDepSymbolResolver(
     typescript: typeof ts,
     node: ts.Node,
@@ -296,6 +318,13 @@ export function createDepSymbolResolver(
             if (
                 isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
                 isDeclarationAssignedByUseState(typescript, valueDeclaration)
+            ) {
+                cached.set(symbol, true);
+                break check;
+            }
+
+            if (
+                isDeclarationDefinitelyConstants(typescript, valueDeclaration)
             ) {
                 cached.set(symbol, true);
                 break check;
