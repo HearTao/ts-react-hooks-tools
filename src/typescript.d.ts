@@ -21,6 +21,7 @@ declare module 'typescript/lib/tsserverlibrary' {
     export function isExpressionNode(node: Node): boolean;
     export function skipParentheses(node: Expression): Expression;
     export function skipParentheses(node: Node): Node;
+    export function isPartOfTypeQuery(node: Node): boolean;
 
     interface NodeFactory {
         cloneNode<T extends Node | undefined>(node: T): T;

@@ -163,6 +163,9 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             this.typescript,
             rawTopLevelNode
         );
+
+        if (ts.isPartOfTypeQuery(topLevelNode)) return undefined;
+
         const checker = program.getTypeChecker();
         if (alreadyWrappedOrContainsInHooks(ts, topLevelNode, checker)) {
             this.logger?.log('Already has hooks');
