@@ -109,3 +109,9 @@ MyTypeScriptLog.txt
 .vscode/
 
 *.vsix
+
+tests/**/*.js
+tests/**/*.d.ts
+tests/**/*.map
+
+.vscode-test/

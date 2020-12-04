@@ -16,19 +16,27 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "build:test": "tsc --project ./tsconfig.test.json",
+    "test:e2e": "node ./tests/runTest",
     "lint": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx}",
     "test:link": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
     "plugin:link": "yarn link && cd plugin && yarn link ts-react-hooks-tools",
     "prettier": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx} --write"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@types/glob": "^7.1.3",
+    "@types/mocha": "^8.0.4",
+    "glob": "^7.1.6",
+    "mocha": "^8.2.1",
+    "vscode-test": "^1.4.1"
+  },
   "devDependencies": {
     "@types/react": "^17.0.0",
     "prettier": "^2.2.1",
-    "typescript": "^4.1.2",
     "react": "^17.0.1",
-    "vscode": "^1.1.5",
-    "vsce": "^1.81.1"
+    "typescript": "^4.1.2",
+    "vsce": "^1.81.1",
+    "vscode": "^1.1.5"
   },
   "files": [
     "dist"
