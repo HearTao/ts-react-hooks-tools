@@ -17,6 +17,7 @@
     "build": "tsc",
     "lint": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx}",
     "test:link": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
+    "plugin:link": "yarn link && cd plugin && yarn link ts-react-hooks-tools",
     "prettier": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx} --write"
   },
   "dependencies": {},
@@ -24,6 +25,11 @@
     "@types/react": "^17.0.0",
     "prettier": "^2.2.1",
     "typescript": "^4.1.2",
-    "react": "^17.0.1"
-  }
+    "react": "^17.0.1",
+    "vscode": "^1.1.5",
+    "vsce": "^1.81.1"
+  },
+  "files": [
+    "dist"
+  ]
 }

@@ -1,0 +1,8 @@
+**/*.ts
+**/*.map
+**/*.txt
+**/tsconfig.json
+**/yarn.lock
+**/*.config.js
+**/plugin
+**/tests
