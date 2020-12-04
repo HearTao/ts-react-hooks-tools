@@ -14,6 +14,7 @@ export const a: React.FC<IProps> = props => {
     const onClick = () => {
         console.log(props.foo);
         alert();
+        console.log(props.foo);
     };
 
     return (
