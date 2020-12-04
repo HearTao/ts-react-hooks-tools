@@ -1,1 +1,1 @@
-# typescript-react-hooks-tools
+# ts-react-hooks-tools
