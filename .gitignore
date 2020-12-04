@@ -110,6 +110,8 @@ MyTypeScriptLog.txt
 
 *.vsix
 
+src/**/*.js
+
 tests/**/*.js
 tests/**/*.d.ts
 tests/**/*.map

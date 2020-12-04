@@ -8,3 +8,6 @@
 **/tests
 **/*.log
 **/.github
+**/node_modules
+**/.vscode-test
+!**/node_modules/ts-react-hooks-tools/dist

@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc",
     "build:test": "tsc --project ./tsconfig.test.json",
-    "test:e2e": "node ./tests/runTest",
+    "test:e2e": "yarn build:test && node ./tests/runTest",
     "lint": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx}",
     "test:link": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
     "plugin:link": "yarn link && cd plugin && yarn link ts-react-hooks-tools",

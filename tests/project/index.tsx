@@ -25,7 +25,7 @@ export const a: React.FC<IProps> = props => {
     const [state, setState] = React.useState('');
     const ref = React.useRef<HTMLDivElement>(null);
 
-    /*[a]*/const value = props.foo + 1 + b.aaaa;/*[b]*/
+    /*[a]*/ const value = props.foo + 1 + b.aaaa; /*[b]*/
 
     const alert = () => {
         window.alert('foo' + state);
