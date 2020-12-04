@@ -4,17 +4,23 @@ interface IProps {
     foo: number;
 }
 
+let b = 1;
+
 export const a: React.FC<IProps> = props => {
-    const value = props.foo + 1;
+    const [state, setState] = React.useState('');
+    const ref = React.useRef<HTMLDivElement>(null);
+
+    const value = props.foo + 1 + b;
 
     const alert = () => {
-        window.alert('foo');
+        window.alert('foo' + state);
     };
 
     const onClick = () => {
         console.log(props.foo);
         alert();
-        console.log(props.foo);
+        setState('1');
+        console.log(props.foo, state, ref.current);
     };
 
     return (
