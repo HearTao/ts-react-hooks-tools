@@ -26,6 +26,6 @@ jobs:
       run: yarn build
       working-directory: ./plugin
     - name: Publish VSCode plugin
-      run: yarn vsce publish -p ${{ secrets.VSCE_TOKEN }}
+      run: yarn vsce publish -p ${{ secrets.AZURE_DEVOPS_ACCESS_TOKEN }}
       working-directory: ./plugin
 
