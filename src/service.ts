@@ -30,7 +30,8 @@ import {
     skipSingleValueDeclaration,
     isExpression,
     wrapIntoJsxExpressionIfNeed,
-    alreadyWrappedOrContainsInHooks
+    alreadyWrappedOrContainsInHooks,
+    isInFunctionComponent
 } from './utils';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
@@ -171,6 +172,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             this.logger?.log('Already has hooks');
             return undefined;
         }
+        if (!isInFunctionComponent(ts, topLevelNode, checker)) return undefined;
 
         this.logger?.log('TopLevelKind: ' + topLevelNode.kind);
         if (isFunctionExpressionLike(ts, topLevelNode)) {
