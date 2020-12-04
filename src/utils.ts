@@ -1,5 +1,5 @@
 import type * as ts from 'typescript/lib/tsserverlibrary';
-import { DependExpression, FunctionExpressionLike } from './types';
+import { FunctionExpressionLike } from './types';
 
 export function isDef<T>(v: T | undefined | null): v is T {
     return v !== undefined && v !== null;
@@ -63,7 +63,135 @@ export function findTopLevelNodeInSelection(
     });
 }
 
-export function isInFunctionComponent(node: Node) {}
+namespace JsxNames {
+    export const JSX = 'JSX';
+    export const Element = 'Element';
+}
+
+export function getGlobalJsxNamespace(
+    typescript: typeof ts,
+    checker: ts.TypeChecker
+) {
+    return checker.resolveName(
+        JsxNames.JSX,
+        undefined,
+        typescript.SymbolFlags.Namespace,
+        false
+    );
+}
+
+function getSymbol(
+    typescript: typeof ts,
+    checker: ts.TypeChecker,
+    symbols: ts.SymbolTable,
+    name: string,
+    meaning: ts.SymbolFlags
+): ts.Symbol | undefined {
+    if (meaning) {
+        const symbol = checker.getMergedSymbol(
+            symbols.get(name as ts.__String)
+        );
+        if (symbol) {
+            if (symbol.flags & meaning) {
+                return symbol;
+            }
+            if (symbol.flags & typescript.SymbolFlags.Alias) {
+                const target = checker.getAliasedSymbol(symbol);
+                if (checker.isUnknownSymbol(target) || target.flags & meaning) {
+                    return symbol;
+                }
+            }
+        }
+    }
+    return undefined;
+}
+
+export function getGlobalJsxElementType(
+    typescript: typeof ts,
+    checker: ts.TypeChecker
+) {
+    const globalJsxNamespace = getGlobalJsxNamespace(typescript, checker);
+    if (!globalJsxNamespace) return undefined;
+
+    const exportsSymbols = checker.getExportsOfModule(globalJsxNamespace);
+    const symbolTable = typescript.createSymbolTable(exportsSymbols);
+    const elementSymbol = getSymbol(
+        typescript,
+        checker,
+        symbolTable,
+        JsxNames.Element,
+        typescript.SymbolFlags.Type
+    );
+    return elementSymbol
+        ? checker.getDeclaredTypeOfSymbol(elementSymbol)
+        : undefined;
+}
+
+export const enum Ternary {
+    False = 0,
+    Unknown = 1,
+    Maybe = 3,
+    True = -1
+}
+
+export function isFunctionComponentLike(
+    node: FunctionExpressionLike,
+    checker: ts.TypeChecker,
+    globalJsxElementType: ts.Type
+) {
+    const signature = checker.getSignatureFromDeclaration(node);
+    if (signature) {
+        const returnType = checker.getReturnTypeOfSignature(signature);
+        if (checker.isTypeAssignableTo(returnType, globalJsxElementType)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function maybeCustomHooks(
+    typescript: typeof ts,
+    node: FunctionExpressionLike
+) {
+    switch (node.kind) {
+        case typescript.SyntaxKind.FunctionExpression:
+        case typescript.SyntaxKind.FunctionDeclaration:
+            if (node.name) {
+                return isUseSomething(node.name.text);
+            }
+
+        case typescript.SyntaxKind.ArrowFunction:
+            const parent = node.parent;
+            if (
+                typescript.isVariableDeclaration(parent) &&
+                typescript.isIdentifier(parent.name)
+            ) {
+                return isUseSomething(parent.name.text);
+            }
+        default:
+            return false;
+    }
+}
+
+export function isInFunctionComponent(
+    typescript: typeof ts,
+    node: ts.Node,
+    checker: ts.TypeChecker
+): Ternary {
+    const globalJsxElementType = getGlobalJsxElementType(typescript, checker);
+    if (!globalJsxElementType) return Ternary.Maybe;
+
+    const maybeFC = typescript.findAncestor(node, parent => {
+        if (isFunctionExpressionLike(typescript, parent)) {
+            return (
+                maybeCustomHooks(typescript, parent) ||
+                isFunctionComponentLike(parent, checker, globalJsxElementType)
+            );
+        }
+        return false;
+    });
+    return maybeFC ? Ternary.True : Ternary.False;
+}
 
 export function functionExpressionLikeToExpression(
     typescript: typeof ts,
