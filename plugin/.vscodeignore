@@ -6,3 +6,5 @@
 **/*.config.js
 **/plugin
 **/tests
+**/*.log
+**/.github
