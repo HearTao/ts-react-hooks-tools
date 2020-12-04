@@ -1,8 +1,6 @@
 name: Publish Plugin
 
-# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     tags: [ '*' ]
 
@@ -27,6 +25,7 @@ jobs:
     - name: Build VSCode plugin
       run: yarn build
       working-directory: ./plugin
-    - uses: lannonbr/vsce-action@master
-      with:
-        args: publish -p ${{ secrets.AZURE_DEVOPS_ACCESS_TOKEN }}
+    - name: Publish VSCode plugin
+      run: yarn vsce publish -p ${{ secrets.VSCE_TOKEN }}
+      working-directory: ./plugin
+
