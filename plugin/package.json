@@ -1,0 +1,41 @@
+{
+    "name": "ts-react-hooks-tools",
+    "displayName": "Typescript React hooks Tools",
+    "description": "Useful refactor of React hooks with TypeScript.",
+    "publisher": "kingwl",
+    "version": "0.0.1",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/HearTao/typescript-react-hooks-tools.git"
+    },
+    "engines": {
+        "vscode": "^1.34.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "typescriptServerPlugins": [
+            {
+                "name": "ts-react-hooks-tools",
+                "enableForWorkspaceTypeScriptVersions": true
+            }
+        ]
+    },
+    "scripts": {
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "build": "vsce package"
+    },
+    "devDependencies": {
+        "typescript": "^4.1.2",
+        "vscode": "^1.1.5",
+        "vsce": "^1.81.1"
+    },
+    "dependencies": {
+        "ts-react-hooks-tools": "file:.."
+    },
+    "extensionDependencies": [
+        "vscode.typescript"
+    ]
+}
