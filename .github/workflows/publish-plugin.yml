@@ -1,0 +1,32 @@
+name: Publish Plugin
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    tags: [ '*' ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js 12.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+    - name: Install yarn
+      run: npm install -g yarn
+    - name: Install deps
+      run: yarn
+    - name: Build
+      run: yarn build
+    - name: Install VSCodep plugin deps
+      run: yarn
+      working-directory: ./plugin
+    - name: Build VSCode plugin
+      run: yarn build
+      working-directory: ./plugin
+    - uses: lannonbr/vsce-action@master
+      with:
+        args: publish -p ${{ secrets.AZURE_DEVOPS_ACCESS_TOKEN }}
