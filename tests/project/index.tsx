@@ -6,6 +6,11 @@ interface IProps {
 
 let b = 1;
 
+enum Enum {
+    A,
+    B
+}
+
 export const a: React.FC<IProps> = props => {
     const [state, setState] = React.useState('');
     const ref = React.useRef<HTMLDivElement>(null);
@@ -13,7 +18,8 @@ export const a: React.FC<IProps> = props => {
     const value = props.foo + 1 + b;
 
     const alert = () => {
-        window.alert('foo' + state);
+        window.alert('foo' + state + a);
+        console.log(Enum.A, Enum.B);
     };
 
     const onClick = () => {
