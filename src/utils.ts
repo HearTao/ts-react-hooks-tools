@@ -213,6 +213,61 @@ export function functionExpressionLikeToExpression(
     }
 }
 
+export function isDeclarationAssignedByHooks(
+    typescript: typeof ts,
+    declaration: ts.Declaration,
+    pred = isUseSomething
+) {
+    if (
+        typescript.isVariableDeclaration(declaration) &&
+        declaration.initializer &&
+        typescript.isCallExpression(declaration.initializer)
+    ) {
+        if (
+            dummyCheckHooks(
+                typescript,
+                declaration.initializer.expression,
+                pred
+            )
+        ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function isDeclarationAssignedByUseRef(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    return isDeclarationAssignedByHooks(typescript, declaration, isUseRef);
+}
+
+export function isDeclarationAssignedByUseState(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    if (
+        typescript.isBindingElement(declaration) &&
+        typescript.isArrayBindingPattern(declaration.parent) &&
+        declaration.parent.elements.length === 2 &&
+        declaration.parent.elements[1] === declaration &&
+        typescript.isVariableDeclaration(declaration.parent.parent)
+    ) {
+        const name = declaration.propertyName ?? declaration.name;
+        return (
+            typescript.isIdentifier(name) &&
+            startsWithIgnoreCase(name.text, 'set') &&
+            isDeclarationAssignedByHooks(
+                typescript,
+                declaration.parent.parent,
+                isUseState
+            )
+        );
+    }
+    return false;
+}
+
 export function createDepSymbolResolver(
     typescript: typeof ts,
     node: ts.Node,
@@ -234,6 +289,14 @@ export function createDepSymbolResolver(
             }
 
             if (typescript.rangeContainsRange(node, valueDeclaration)) {
+                cached.set(symbol, true);
+                break check;
+            }
+
+            if (
+                isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
+                isDeclarationAssignedByUseState(typescript, valueDeclaration)
+            ) {
                 cached.set(symbol, true);
                 break check;
             }
@@ -396,26 +459,39 @@ export function compareIgnoreCase(a: string, b: string) {
     return a.toLowerCase() === b.toLowerCase();
 }
 
+export function startsWithIgnoreCase(a: string, b: string) {
+    return a.toLowerCase().startsWith(b.toLowerCase());
+}
+
 export function isReactText(s: string) {
     return compareIgnoreCase(s, 'react');
 }
 
 export function isUseSomething(s: string) {
-    return s.toLowerCase().startsWith('use');
+    return startsWithIgnoreCase(s, 'use');
+}
+
+export function isUseRef(s: string) {
+    return compareIgnoreCase(s, 'useRef');
+}
+
+export function isUseState(s: string) {
+    return compareIgnoreCase(s, 'useState');
 }
 
 export function dummyCheckHooks(
     typescript: typeof ts,
-    expression: ts.Expression
+    expression: ts.Expression,
+    pred = isUseSomething
 ): boolean {
     if (typescript.isIdentifier(expression)) {
-        return isUseSomething(expression.text);
+        return pred(expression.text);
     }
     if (typescript.isPropertyAccessExpression(expression)) {
         return (
             typescript.isIdentifier(expression.expression) &&
             isReactText(expression.expression.text) &&
-            isUseSomething(expression.name.text)
+            pred(expression.name.text)
         );
     }
     if (typescript.isElementAccessExpression(expression)) {
@@ -423,7 +499,7 @@ export function dummyCheckHooks(
             typescript.isIdentifier(expression.expression) &&
             typescript.isStringLiteralLike(expression.argumentExpression) &&
             isReactText(expression.expression.text) &&
-            isUseSomething(expression.argumentExpression.text)
+            pred(expression.argumentExpression.text)
         );
     }
     return false;
