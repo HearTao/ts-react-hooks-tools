@@ -14,4 +14,4 @@ A tools who provide a series of refactors about react hooks. Build with ❤️.
 
 ### Usages
 
-WIP
+![Summary](docs/summary.gif)
