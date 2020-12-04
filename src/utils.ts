@@ -93,7 +93,8 @@ export function createDepSymbolResolver(
     const cached = new Map<ts.Symbol, boolean>();
 
     return {
-        shouldSymbolDefinitelyBeIgnoreInDeps
+        shouldSymbolDefinitelyBeIgnoreInDeps,
+        alreadyDuplicated
     };
 
     function shouldSymbolDefinitelyBeIgnoreInDeps(symbol: ts.Symbol) {
@@ -113,6 +114,10 @@ export function createDepSymbolResolver(
         }
 
         return cached.get(symbol);
+    }
+
+    function alreadyDuplicated(symbol: ts.Symbol) {
+        return cached.has(symbol);
     }
 }
 

@@ -372,7 +372,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     const symbol = checker.getSymbolAtLocation(node);
                     if (
                         !symbol ||
-                        !resolver.shouldSymbolDefinitelyBeIgnoreInDeps(symbol)
+                        (!resolver.alreadyDuplicated(symbol) &&
+                            !resolver.shouldSymbolDefinitelyBeIgnoreInDeps(
+                                symbol
+                            ))
                     ) {
                         references.push(identifier);
                     }
@@ -393,9 +396,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                         );
                         if (
                             !symbol ||
-                            !resolver.shouldSymbolDefinitelyBeIgnoreInDeps(
-                                symbol
-                            )
+                            (!resolver.alreadyDuplicated(symbol) &&
+                                !resolver.shouldSymbolDefinitelyBeIgnoreInDeps(
+                                    symbol
+                                ))
                         ) {
                             references.push(accessExpression);
                         }
