@@ -1,5 +1,6 @@
 {
   "name": "ts-react-hooks-tools",
+  "description": "Provide tools to make React hooks easy.",
   "license": "MIT",
   "author": {
     "name": "Wenlu Wang",
@@ -10,7 +11,7 @@
     "type": "git",
     "url": "https://github.com/HearTao/ts-react-hooks-tools.git"
   },
-  "version": "0.0.1",
+  "version": "0.0.1-test.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
