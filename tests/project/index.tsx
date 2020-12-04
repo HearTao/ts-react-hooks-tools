@@ -4,7 +4,17 @@ interface IProps {
     foo: number;
 }
 
-let b = 1;
+const b = {
+    aaaa: 1
+};
+
+const { aaaa } = b;
+
+const render = () => {
+    return <div />;
+};
+class C {}
+function func() {}
 
 enum Enum {
     A,
@@ -15,11 +25,11 @@ export const a: React.FC<IProps> = props => {
     const [state, setState] = React.useState('');
     const ref = React.useRef<HTMLDivElement>(null);
 
-    const value = props.foo + 1 + b;
+    const value = props.foo + 1 + b.aaaa;
 
     const alert = () => {
-        window.alert('foo' + state + a);
-        console.log(Enum.A, Enum.B);
+        window.alert('foo' + state);
+        console.log(Enum.A, Enum.B, b, aaaa);
     };
 
     const onClick = () => {

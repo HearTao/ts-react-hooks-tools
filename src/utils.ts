@@ -213,6 +213,52 @@ export function functionExpressionLikeToExpression(
     }
 }
 
+export function byPassRootDeclaration(
+    typescript: typeof ts,
+    node: ts.Node
+): ts.Node {
+    switch (node.kind) {
+        case typescript.SyntaxKind.VariableDeclaration:
+        case typescript.SyntaxKind.VariableDeclarationList:
+        case typescript.SyntaxKind.BindingElement:
+        case typescript.SyntaxKind.ArrayBindingPattern:
+        case typescript.SyntaxKind.ObjectBindingPattern:
+            return byPassRootDeclaration(typescript, node.parent);
+        default:
+            return node;
+    }
+}
+
+export function isConstantDeclarationIfRoot(
+    typescript: typeof ts,
+    node: ts.Node
+) {
+    switch (node.kind) {
+        case typescript.SyntaxKind.VariableStatement:
+            return !!(
+                typescript.getCombinedNodeFlags(
+                    (node as ts.VariableStatement).declarationList
+                ) & typescript.NodeFlags.Const
+            );
+        case typescript.SyntaxKind.FunctionDeclaration:
+        case typescript.SyntaxKind.ClassDeclaration:
+            return true;
+        default:
+            return false;
+    }
+}
+
+export function isTopLevelConstantDeclaration(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    const rootDeclaration = byPassRootDeclaration(typescript, declaration);
+    if (typescript.isSourceFile(rootDeclaration.parent)) {
+        return isConstantDeclarationIfRoot(typescript, rootDeclaration);
+    }
+    return false;
+}
+
 export function isDeclarationAssignedByHooks(
     typescript: typeof ts,
     declaration: ts.Declaration,
@@ -326,6 +372,11 @@ export function createDepSymbolResolver(
             if (
                 isDeclarationDefinitelyConstants(typescript, valueDeclaration)
             ) {
+                cached.set(symbol, true);
+                break check;
+            }
+
+            if (isTopLevelConstantDeclaration(typescript, valueDeclaration)) {
                 cached.set(symbol, true);
                 break check;
             }
