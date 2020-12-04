@@ -27,7 +27,7 @@ jobs:
     - name: Build
       run: yarn build
     - name: Upload build
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: ts-plugin
         path: ./dist
@@ -38,7 +38,7 @@ jobs:
       run: yarn build
       working-directory: ./plugin
     - name: Upload build
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: vscode-plugin
         path: ./plugin/*.vsix
