@@ -21,23 +21,7 @@ jobs:
       run: yarn
     - name: Build
       run: yarn build
-    - name: Upload build
-      uses: actions/upload-artifact@v2
-      with:
-        name: ts-plugin
-        path: ./dist
-    - name: Install VSCodep plugin deps
-      run: yarn
-      working-directory: ./plugin
-    - name: Build VSCode plugin
-      run: yarn build
-      working-directory: ./plugin
-    - name: Upload build
-      uses: actions/upload-artifact@v2
-      with:
-        name: vscode-plugin
-        path: ./plugin/*.vsix
-        
-    - run: npm publish
+    - name: Publish Npm
+      run: npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
