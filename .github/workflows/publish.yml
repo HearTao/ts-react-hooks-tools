@@ -37,7 +37,7 @@ jobs:
     - name: Bootstrap
       run: yarn bootstrap:release
     - name: Install lastest plugin
-      run: yarn add
+      run: yarn add ts-react-hooks-tools
       working-directory: ./plugin
     - name: Build
       run: yarn build:release
