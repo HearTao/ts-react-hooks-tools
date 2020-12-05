@@ -30,7 +30,7 @@
     "link:all": "yarn link:test && yarn link:plugin",
 
     "test:e2e": "yarn build:test && node ./tests/runTest",
-    "test:ci": "yarn bootstrap:all && yarn build:all && yarn test:e2e",
+    "test:ci": "yarn bootstrap:all && link:all && yarn build:all && yarn test:e2e",
 
     "lint": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx}",
     "prettier": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx} --write"
