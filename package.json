@@ -15,12 +15,24 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "bootstrap": "yarn",
+    "bootstrap:plugin": "cd ./plugin && yarn",
+    "bootstrap:test": "cd ./tests/project && yarn",
+    "bootstrap:all": "yarn bootstrap && yarn bootstrap:plugin && yarn bootstrap:test",
+
     "build": "tsc",
+    "build:plugin": "cd ./plugin && yarn build",
     "build:test": "tsc --project ./tsconfig.test.json",
+    "build:all": "yarn build && yarn build:plugin && yarn build:test",
+
+    "link:test": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
+    "link:plugin": "yarn link && cd plugin && yarn link ts-react-hooks-tools",
+    "link:all": "yarn link:test && yarn link:plugin",
+
     "test:e2e": "yarn build:test && node ./tests/runTest",
+    "test:ci": "yarn bootstrap:all && yarn build:all && yarn test:e2e",
+
     "lint": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx}",
-    "test:link": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
-    "plugin:link": "yarn link && cd plugin && yarn link ts-react-hooks-tools",
     "prettier": "prettier -c --config ./prettier.config.js ./src/**/*.{ts,tsx} ./tests/**/*.{ts,tsx} --write"
   },
   "dependencies": {
