@@ -5,8 +5,8 @@ import { LanguageServiceLogger } from './logger';
 import {
     refactorName,
     refactorDescriptions,
-    wrapIntoUseContextActionName,
-    wrapIntoUseContextActionDescription,
+    wrapIntoUseCallbackActionName,
+    wrapIntoUseCallbackActionDescription,
     wrapIntoUseMemoActionName,
     wrapIntoUseMemoActionDescription
 } from './constants';
@@ -31,7 +31,10 @@ import {
     isExpression,
     wrapIntoJsxExpressionIfNeed,
     alreadyWrappedOrContainsInHooks,
-    isInFunctionComponent
+    isInFunctionComponent,
+    skipJsxExpression,
+    skipJsxTextToken,
+    isDefinitelyNotSupportedToken
 } from './utils';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
@@ -66,8 +69,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     description: refactorDescriptions,
                     actions: [
                         {
-                            name: wrapIntoUseContextActionName,
-                            description: wrapIntoUseContextActionDescription
+                            name: wrapIntoUseCallbackActionName,
+                            description: wrapIntoUseCallbackActionDescription
                         }
                     ]
                 }
@@ -120,7 +123,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         };
         if (
             info.kind === RefactorKind.useCallback &&
-            actionName === wrapIntoUseContextActionName
+            actionName === wrapIntoUseCallbackActionName
         ) {
             return this.getEditsForConvertUseCallback(
                 info,
@@ -150,7 +153,11 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
     ): Info | undefined {
         const ts = this.typescript;
 
-        const startToken = ts.getTokenAtPosition(file, startPosition);
+        const startToken = skipJsxTextToken(
+            ts,
+            ts.getTokenAtPosition(file, startPosition),
+            file
+        );
         const rawTopLevelNode = findTopLevelNodeInSelection(
             ts,
             startToken,
@@ -160,11 +167,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         );
         if (!rawTopLevelNode) return undefined;
 
-        const topLevelNode = skipSingleValueDeclaration(
+        const topLevelNode = skipJsxExpression(
             this.typescript,
-            rawTopLevelNode
+            skipSingleValueDeclaration(this.typescript, rawTopLevelNode)
         );
 
+        if (isDefinitelyNotSupportedToken(ts, topLevelNode)) return undefined;
         if (ts.isPartOfTypeQuery(topLevelNode)) return undefined;
 
         const checker = program.getTypeChecker();

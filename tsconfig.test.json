@@ -1,0 +1,14 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "declaration": false,
+        "sourceMap": false,
+        "outDir": null
+    },
+    "include": [
+        "tests"
+    ],
+    "exclude": [
+        "tests/project"
+    ]
+}
