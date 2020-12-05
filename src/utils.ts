@@ -196,6 +196,39 @@ export function isInFunctionComponent(
     return maybeFC ? Ternary.True : Ternary.False;
 }
 
+export function isInTagNameExpression(typescript: typeof ts, node: ts.Node) {
+    let lastNode: ts.Node | undefined = undefined;
+    return !!typescript.findAncestor(node, parent => {
+        if (
+            lastNode &&
+            (typescript.isJsxOpeningElement(parent) ||
+                typescript.isJsxClosingElement(parent)) &&
+            typescript.isJsxTagNameExpression(lastNode) &&
+            parent.tagName === lastNode
+        ) {
+            return true;
+        }
+        lastNode = parent;
+        return false;
+    });
+}
+
+export function isDefinitelyNotSupportedToken(
+    typescript: typeof ts,
+    node: ts.Node
+) {
+    switch (node.kind) {
+        case typescript.SyntaxKind.JsxOpeningFragment:
+        case typescript.SyntaxKind.JsxClosingFragment:
+        case typescript.SyntaxKind.JsxOpeningElement:
+        case typescript.SyntaxKind.JsxClosingElement:
+        case typescript.SyntaxKind.JsxText:
+            return true;
+        default:
+            return isInTagNameExpression(typescript, node);
+    }
+}
+
 export function functionExpressionLikeToExpression(
     typescript: typeof ts,
     func: FunctionExpressionLike
@@ -445,6 +478,30 @@ export function skipSingleValueDeclaration(
         return node.initializer;
     }
     return original;
+}
+
+export function skipJsxTextToken(
+    typescript: typeof ts,
+    node: ts.Node,
+    file: ts.SourceFile
+) {
+    if (typescript.isJsxText(node) && node.containsOnlyTriviaWhiteSpaces) {
+        const nextToken = typescript.getTokenAtPosition(file, node.end);
+        if (
+            nextToken &&
+            typescript.rangeContainsRange(node.parent, nextToken)
+        ) {
+            return nextToken;
+        }
+    }
+    return node;
+}
+
+export function skipJsxExpression(
+    typescript: typeof ts,
+    node: ts.Node
+): ts.Node {
+    return (typescript.isJsxExpression(node) && node.expression) || node;
 }
 
 export function isExpression(

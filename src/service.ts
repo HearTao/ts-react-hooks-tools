@@ -31,7 +31,10 @@ import {
     isExpression,
     wrapIntoJsxExpressionIfNeed,
     alreadyWrappedOrContainsInHooks,
-    isInFunctionComponent
+    isInFunctionComponent,
+    skipJsxExpression,
+    skipJsxTextToken,
+    isDefinitelyNotSupportedToken
 } from './utils';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
@@ -150,7 +153,11 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
     ): Info | undefined {
         const ts = this.typescript;
 
-        const startToken = ts.getTokenAtPosition(file, startPosition);
+        const startToken = skipJsxTextToken(
+            ts,
+            ts.getTokenAtPosition(file, startPosition),
+            file
+        );
         const rawTopLevelNode = findTopLevelNodeInSelection(
             ts,
             startToken,
@@ -160,11 +167,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         );
         if (!rawTopLevelNode) return undefined;
 
-        const topLevelNode = skipSingleValueDeclaration(
+        const topLevelNode = skipJsxExpression(
             this.typescript,
-            rawTopLevelNode
+            skipSingleValueDeclaration(this.typescript, rawTopLevelNode)
         );
 
+        if (isDefinitelyNotSupportedToken(ts, topLevelNode)) return undefined;
         if (ts.isPartOfTypeQuery(topLevelNode)) return undefined;
 
         const checker = program.getTypeChecker();

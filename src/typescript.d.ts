@@ -6,6 +6,11 @@ declare module 'typescript/lib/tsserverlibrary' {
         sourceFile: SourceFile,
         position: number
     ): Node;
+    export function findNextToken(
+        previousToken: Node,
+        parent: Node,
+        sourceFile: SourceFileLike
+    ): Node | undefined;
     export function startEndContainsRange(
         start: number,
         end: number,
@@ -22,6 +27,9 @@ declare module 'typescript/lib/tsserverlibrary' {
     export function skipParentheses(node: Expression): Expression;
     export function skipParentheses(node: Node): Node;
     export function isPartOfTypeQuery(node: Node): boolean;
+    export function isJsxTagNameExpression(
+        node: Node
+    ): node is JsxTagNameExpression;
     export function createSymbolTable(symbols?: readonly Symbol[]): SymbolTable;
     interface TypeChecker {
         getExportsOfModule(moduleSymbol: Symbol): Symbol[];
