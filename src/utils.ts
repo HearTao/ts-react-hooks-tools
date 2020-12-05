@@ -375,7 +375,8 @@ export function isDeclarationDefinitelyConstants(
 export function createDepSymbolResolver(
     typescript: typeof ts,
     node: ts.Node,
-    file: ts.SourceFile
+    file: ts.SourceFile,
+    checker: ts.TypeChecker
 ) {
     const cached = new Map<ts.Symbol, boolean>();
 
@@ -384,16 +385,26 @@ export function createDepSymbolResolver(
         alreadyDuplicated
     };
 
-    function shouldSymbolDefinitelyBeIgnoreInDeps(symbol: ts.Symbol) {
-        check: if (!cached.has(symbol)) {
+    function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
+        check: if (!cached.has(rawSymbol)) {
+            const symbol =
+                rawSymbol.flags & typescript.SymbolFlags.Alias
+                    ? checker.getAliasedSymbol(rawSymbol)
+                    : rawSymbol;
+
             const valueDeclaration = symbol.valueDeclaration;
-            if (valueDeclaration?.getSourceFile() !== file) {
-                cached.set(symbol, true);
+            if (!valueDeclaration) {
+                cached.set(rawSymbol, false);
+                break check;
+            }
+
+            if (valueDeclaration.getSourceFile() !== file) {
+                cached.set(rawSymbol, true);
                 break check;
             }
 
             if (typescript.rangeContainsRange(node, valueDeclaration)) {
-                cached.set(symbol, true);
+                cached.set(rawSymbol, true);
                 break check;
             }
 
@@ -401,26 +412,26 @@ export function createDepSymbolResolver(
                 isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
                 isDeclarationAssignedByUseState(typescript, valueDeclaration)
             ) {
-                cached.set(symbol, true);
+                cached.set(rawSymbol, true);
                 break check;
             }
 
             if (
                 isDeclarationDefinitelyConstants(typescript, valueDeclaration)
             ) {
-                cached.set(symbol, true);
+                cached.set(rawSymbol, true);
                 break check;
             }
 
             if (isTopLevelConstantDeclaration(typescript, valueDeclaration)) {
-                cached.set(symbol, true);
+                cached.set(rawSymbol, true);
                 break check;
             }
 
-            cached.set(symbol, false);
+            cached.set(rawSymbol, false);
         }
 
-        return cached.get(symbol);
+        return cached.get(rawSymbol);
     }
 
     function alreadyDuplicated(symbol: ts.Symbol) {
