@@ -18,10 +18,10 @@ jobs:
         node-version: 12.x
     - name: Install yarn
       run: npm install -g yarn
-    - name: Lint
-      run: yarn lint
     - name: Bootstrap tests
       run: yarn test:ci
+    - name: Lint
+      run: yarn lint
     - name: Upload build
       uses: actions/upload-artifact@v2
       with:
