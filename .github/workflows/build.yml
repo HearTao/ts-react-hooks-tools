@@ -20,6 +20,14 @@ jobs:
       run: npm install -g yarn
     - name: Bootstrap tests
       run: yarn test:ci
+
+    - run: sudo apt-get update
+    - run: sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
+    - run: sudo cp .github/workflows/xvfb.init /etc/init.d/xvfb
+    - run: sudo chmod +x /etc/init.d/xvfb
+    - run: sudo update-rc.d xvfb defaults
+    - run: sudo service xvfb start
+
     - name: Upload build
       uses: actions/upload-artifact@v2
       with:
