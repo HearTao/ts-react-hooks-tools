@@ -368,7 +368,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const ts = this.typescript;
         const logger = this.logger;
         const references: DependExpression[] = [];
-        const resolver = createDepSymbolResolver(ts, scope, file);
+        const resolver = createDepSymbolResolver(ts, scope, file, checker);
 
         visitor(scope);
         return references;
