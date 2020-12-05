@@ -387,7 +387,10 @@ export function createDepSymbolResolver(
 
     function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
         check: if (!cached.has(rawSymbol)) {
-            const symbol = rawSymbol.flags & typescript.SymbolFlags.Alias ? checker.getAliasedSymbol(rawSymbol) : rawSymbol;
+            const symbol =
+                rawSymbol.flags & typescript.SymbolFlags.Alias
+                    ? checker.getAliasedSymbol(rawSymbol)
+                    : rawSymbol;
 
             const valueDeclaration = symbol.valueDeclaration;
             if (!valueDeclaration) {

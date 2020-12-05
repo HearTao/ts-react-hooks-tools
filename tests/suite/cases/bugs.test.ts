@@ -19,7 +19,9 @@ suite('Regression test', async () => {
     test('Should work with #44', async () => {
         await openProjectFolder();
 
-        const file = projectFile('cases/bugs/shouldWorkWithNonValueDeclaration.tsx');
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithNonValueDeclaration.tsx'
+        );
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
             file,

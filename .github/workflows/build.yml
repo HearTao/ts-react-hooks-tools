@@ -18,6 +18,8 @@ jobs:
         node-version: 12.x
     - name: Install yarn
       run: npm install -g yarn
+    - name: Lint
+      run: yarn lint
     - name: Bootstrap tests
       run: yarn test:ci
     - name: Upload build
