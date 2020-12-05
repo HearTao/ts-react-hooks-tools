@@ -3,7 +3,7 @@
     "displayName": "Typescript React hooks Tools",
     "description": "Useful refactor of React hooks with TypeScript.",
     "publisher": "kingwl",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -29,11 +29,11 @@
     },
     "devDependencies": {
         "typescript": "^4.1.2",
-        "vscode": "^1.1.5",
-        "vsce": "^1.81.1"
+        "vsce": "^1.81.1",
+        "vscode": "^1.1.5"
     },
     "dependencies": {
-        "ts-react-hooks-tools": "file:.."
+        "ts-react-hooks-tools": "^0.1.0"
     },
     "extensionDependencies": [
         "vscode.typescript"

@@ -23,3 +23,15 @@ jobs:
       uses: JS-DevTools/npm-publish@v1
       with:
         token: ${{ secrets.NPM_TOKEN }}
+    - name: Install VSCodep plugin deps
+      run: yarn
+      working-directory: ./plugin
+    - name: Install lastest plugin
+      run: yarn add ts-react-hooks-tools
+      working-directory: ./plugin
+    - name: Build VSCode plugin
+      run: yarn build
+      working-directory: ./plugin
+    - name: Publish VSCode plugin
+      run: yarn vsce publish -p ${{ secrets.AZURE_DEVOPS_ACCESS_TOKEN }}
+      working-directory: ./plugin

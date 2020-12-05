@@ -1050,8 +1050,10 @@ to-regex-range@^5.0.1:
   dependencies:
     is-number "^7.0.0"
 
-"ts-react-hooks-tools@file:..":
-  version "0.0.1-test.5"
+ts-react-hooks-tools@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/ts-react-hooks-tools/-/ts-react-hooks-tools-0.1.0.tgz#a81243bcdeb0c336e22cd68620d64021ca0f0503"
+  integrity sha512-PzTy6gYivi/praN5nhKf7dCCgKU6oJ7wt03j+9nFFDFnaNvDQHduutIVGqEKHeaAXczYyQou4o0Mbkkou2ucmQ==
   dependencies:
     "@types/glob" "^7.1.3"
     "@types/mocha" "^8.0.4"
