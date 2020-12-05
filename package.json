@@ -11,7 +11,7 @@
     "type": "git",
     "url": "https://github.com/HearTao/ts-react-hooks-tools.git"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -19,10 +19,12 @@
     "bootstrap:plugin": "cd ./plugin && yarn",
     "bootstrap:test": "cd ./tests/project && yarn",
     "bootstrap:all": "yarn bootstrap && yarn bootstrap:plugin && yarn bootstrap:test",
+    "bootstrap:release": "yarn bootstrap && yarn bootstrap:plugin",
 
     "build": "tsc",
     "build:plugin": "cd ./plugin && yarn build",
     "build:test": "tsc --project ./tsconfig.test.json",
+    "build:release": "yarn build && yarn build:plugin",
     "build:all": "yarn build && yarn build:plugin && yarn build:test",
 
     "link:test": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
