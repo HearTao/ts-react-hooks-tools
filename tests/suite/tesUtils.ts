@@ -212,3 +212,170 @@ export const nulToken: vscode.CancellationToken = {
     isCancellationRequested: false,
     onCancellationRequested: () => noopDisposable
 };
+
+export function getLabelPosition(
+    label: string,
+    fullText: string,
+    editor: vscode.TextEditor,
+    ignoreLabel: boolean
+) {
+    const labelText = `/*[${label}]*/`;
+    const labelOffset =
+        fullText.indexOf(labelText) + (ignoreLabel ? labelText.length : 0);
+    return editor.document.positionAt(labelOffset);
+}
+
+export function getSelectionBetweenLabel(
+    start: string,
+    end: string,
+    editor: vscode.TextEditor
+) {
+    const fullText = editor.document.getText();
+    const labelAPos = getLabelPosition(start, fullText, editor, true);
+    const labelBPos = getLabelPosition(end, fullText, editor, false);
+    return new vscode.Selection(labelAPos, labelBPos);
+}
+
+export function convertSelectionIntoRange(selection: vscode.Selection) {
+    return new vscode.Range(selection.start, selection.end);
+}
+
+export function convertRangeIntoSelection(range: vscode.Range) {
+    return new vscode.Selection(range.start, range.end);
+}
+
+export async function executeCodeActionProviderCommand(
+    file: vscode.Uri,
+    range: vscode.Selection
+) {
+    return (
+        (await vscode.commands.executeCommand<vscode.CodeAction[]>(
+            'vscode.executeCodeActionProvider',
+            file,
+            range
+        )) ?? []
+    );
+}
+
+export async function executeCodeActionProviderCommandInSelection(
+    file: vscode.Uri,
+    getSelection: () => vscode.Selection
+) {
+    const selection = getSelection();
+
+    await wait(3000);
+
+    const codeActions = await executeCodeActionProviderCommand(file, selection);
+    return codeActions;
+}
+
+export async function executeAndNotExistCodeActionInSelection(
+    file: vscode.Uri,
+    getSelection: () => vscode.Selection,
+    actionTitle: string
+) {
+    const codeActions = await executeCodeActionProviderCommandInSelection(
+        file,
+        getSelection
+    );
+    const codeAction = codeActions.find(x => x.title === actionTitle)!;
+    assert.strictEqual(codeAction, undefined);
+}
+
+export async function executeAndCompareCodeActionInSelection(
+    file: vscode.Uri,
+    editor: vscode.TextEditor,
+    getSelection: () => vscode.Selection,
+    actionTitle: string
+) {
+    const codeActions = await executeCodeActionProviderCommandInSelection(
+        file,
+        getSelection
+    );
+    assert.notStrictEqual(codeActions.length, 0);
+
+    const refactorAction = codeActions.find(x => x.title === actionTitle)!;
+    assert.notStrictEqual(refactorAction, undefined);
+
+    const applyCommand = refactorAction.command!;
+    assert.notStrictEqual(applyCommand, undefined);
+
+    const codeAction = applyCommand.arguments![0]!.codeAction!;
+    assert.notStrictEqual(codeAction, undefined);
+
+    await codeAction.resolve(nulToken);
+
+    await vscode.workspace.applyEdit(codeAction.edit);
+
+    const selectionAfterUpdate = getSelection();
+
+    return editor.document
+        .getText(convertSelectionIntoRange(selectionAfterUpdate))
+        .trim();
+}
+
+export async function executeAndCompareCodeActionBewteenLabel(
+    file: vscode.Uri,
+    editor: vscode.TextEditor,
+    labelA: string,
+    labelB: string,
+    actionTitle: string
+) {
+    return executeAndCompareCodeActionInSelection(
+        file,
+        editor,
+        () => getSelectionBetweenLabel(labelA, labelB, editor),
+        actionTitle
+    );
+}
+
+export async function executeAndNotExistCodeActionBewteenLabel(
+    file: vscode.Uri,
+    editor: vscode.TextEditor,
+    labelA: string,
+    labelB: string,
+    actionTitle: string
+) {
+    return executeAndNotExistCodeActionInSelection(
+        file,
+        () => getSelectionBetweenLabel(labelA, labelB, editor),
+        actionTitle
+    );
+}
+
+export async function executeAndCompareCodeActionInLine(
+    file: vscode.Uri,
+    editor: vscode.TextEditor,
+    lineNumber: number,
+    actionTitle: string
+) {
+    return executeAndCompareCodeActionInSelection(
+        file,
+        editor,
+        () =>
+            convertRangeIntoSelection(editor.document.lineAt(lineNumber).range),
+        actionTitle
+    );
+}
+
+const projectFolder = vscode.Uri.file(path.resolve(__dirname, '../project'));
+
+export function projectFile(fileName: string) {
+    return vscode.Uri.file(path.join(projectFolder.fsPath, fileName));
+}
+
+export async function openProjectFolder() {
+    await vscode.commands.executeCommand('vscode.openFolder', projectFolder);
+}
+
+export function normalizeIndent(str: string) {
+    return str
+        .trim()
+        .split(/\r?\n/)
+        .map(x => x.trim())
+        .join('\n');
+}
+
+export function normalizedCompare(a: string, b: string) {
+    assert.strictEqual(normalizeIndent(a), normalizeIndent(b));
+}

@@ -5,8 +5,8 @@ import { LanguageServiceLogger } from './logger';
 import {
     refactorName,
     refactorDescriptions,
-    wrapIntoUseContextActionName,
-    wrapIntoUseContextActionDescription,
+    wrapIntoUseCallbackActionName,
+    wrapIntoUseCallbackActionDescription,
     wrapIntoUseMemoActionName,
     wrapIntoUseMemoActionDescription
 } from './constants';
@@ -69,8 +69,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     description: refactorDescriptions,
                     actions: [
                         {
-                            name: wrapIntoUseContextActionName,
-                            description: wrapIntoUseContextActionDescription
+                            name: wrapIntoUseCallbackActionName,
+                            description: wrapIntoUseCallbackActionDescription
                         }
                     ]
                 }
@@ -123,7 +123,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         };
         if (
             info.kind === RefactorKind.useCallback &&
-            actionName === wrapIntoUseContextActionName
+            actionName === wrapIntoUseCallbackActionName
         ) {
             return this.getEditsForConvertUseCallback(
                 info,
