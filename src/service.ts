@@ -62,7 +62,13 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         if (!context) return [];
         const { file, program } = context;
 
-        const info = this.getInfo(startPosition, endPosition, file, program, false);
+        const info = this.getInfo(
+            startPosition,
+            endPosition,
+            file,
+            program,
+            false
+        );
         if (!info) return [];
 
         if (info.kind === RefactorKind.useCallback) {
@@ -113,7 +119,13 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         if (!context) return undefined;
         const { file, program } = context;
 
-        const info = this.getInfo(startPosition, endPosition, file, program, true);
+        const info = this.getInfo(
+            startPosition,
+            endPosition,
+            file,
+            program,
+            true
+        );
         if (!info) return undefined;
 
         const formatContext = this.typescript.formatting.getFormatContext(
@@ -214,13 +226,17 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         checker: ts.TypeChecker,
         full: boolean
     ): Info {
-        const deps = full ? this.getOutsideReferences(expression, file, checker) : [];
-        const hooksReference = full ? getHooksNameReferenceType(
-            this.typescript,
-            expression,
-            checker,
-            'useMemo'
-        ) : undefined;
+        const deps = full
+            ? this.getOutsideReferences(expression, file, checker)
+            : [];
+        const hooksReference = full
+            ? getHooksNameReferenceType(
+                  this.typescript,
+                  expression,
+                  checker,
+                  'useMemo'
+              )
+            : undefined;
         this.logger?.log('Universal Deps: ' + deps.length);
         this.logger?.log('hooksReference: ' + JSON.stringify(hooksReference));
         return {
@@ -237,13 +253,17 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         checker: ts.TypeChecker,
         full: boolean
     ): Info {
-        const deps = full ? this.getOutsideReferences(func.body, file, checker) :[];
-        const hooksReference = full ? getHooksNameReferenceType(
-            this.typescript,
-            func,
-            checker,
-            'useCallback'
-        ) : undefined;
+        const deps = full
+            ? this.getOutsideReferences(func.body, file, checker)
+            : [];
+        const hooksReference = full
+            ? getHooksNameReferenceType(
+                  this.typescript,
+                  func,
+                  checker,
+                  'useCallback'
+              )
+            : undefined;
         this.logger?.log('Function Deps: ' + deps.length);
         return {
             kind: RefactorKind.useCallback,
