@@ -13,6 +13,7 @@ import {
 import {
     DependExpression,
     FunctionExpressionLike,
+    HooksReferenceNameType,
     Info,
     RefactorContext,
     RefactorKind,
@@ -24,7 +25,6 @@ import {
     isFunctionExpressionLike,
     functionExpressionLikeToExpression,
     getRangeOfPositionOrRange,
-    isDef,
     createDepSymbolResolver,
     cloneDeep,
     skipSingleValueDeclaration,
@@ -34,11 +34,11 @@ import {
     isInFunctionComponent,
     skipJsxExpression,
     skipJsxTextToken,
-    HooksReferenceNameType,
     isDefinitelyNotSupportedToken,
     getHooksNameReferenceType,
     createHooksReference
 } from './utils';
+import { isDef } from './helper';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
     constructor(
@@ -56,10 +56,16 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const [startPosition, endPosition] = getRangeOfPositionOrRange(
             positionOrRange
         );
-        if (!isDef(endPosition)) return [];
+        if (!isDef(endPosition)) {
+            this.logger.log('Cannot find endPosition');
+            return [];
+        }
 
         const context = this.getRefactorContext(fileName);
-        if (!context) return [];
+        if (!context) {
+            this.logger.log('Cannot refactor context');
+            return [];
+        }
         const { file, program } = context;
 
         const info = this.getInfo(
@@ -69,7 +75,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             program,
             false
         );
-        if (!info) return [];
+        if (!info) {
+            this.logger.log('Empty info');
+            return [];
+        }
 
         if (info.kind === RefactorKind.useCallback) {
             return [
@@ -113,10 +122,16 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const [startPosition, endPosition] = getRangeOfPositionOrRange(
             positionOrRange
         );
-        if (!isDef(endPosition)) return undefined;
+        if (!isDef(endPosition)) {
+            this.logger.log('Cannot find endPosition');
+            return undefined;
+        }
 
         const context = this.getRefactorContext(fileName);
-        if (!context) return undefined;
+        if (!context) {
+            this.logger.log('Cannot refactor context');
+            return undefined;
+        }
         const { file, program } = context;
 
         const info = this.getInfo(
@@ -126,7 +141,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             program,
             true
         );
-        if (!info) return undefined;
+        if (!info) {
+            this.logger.log('Empty info');
+            return undefined;
+        }
 
         const formatContext = this.typescript.formatting.getFormatContext(
             formatOptions
@@ -157,6 +175,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             );
         }
 
+        this.logger.log('Unknown action');
         return undefined;
     }
 
@@ -181,24 +200,38 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             endPosition,
             file
         );
-        if (!rawTopLevelNode) return undefined;
+        if (!rawTopLevelNode) {
+            this.logger.log('Cannot find rawTopLevelNode');
+            return undefined;
+        }
 
         const topLevelNode = skipJsxExpression(
             this.typescript,
             skipSingleValueDeclaration(this.typescript, rawTopLevelNode)
         );
 
-        if (isDefinitelyNotSupportedToken(ts, topLevelNode)) return undefined;
-        if (ts.isPartOfTypeQuery(topLevelNode)) return undefined;
+        if (isDefinitelyNotSupportedToken(ts, topLevelNode)) {
+            this.logger.log(
+                'topLevelNode definitely not supported: ' + topLevelNode.kind
+            );
+            return undefined;
+        }
+        if (ts.isPartOfTypeQuery(topLevelNode)) {
+            this.logger.log('Cannot work inside type query');
+            return undefined;
+        }
 
         const checker = program.getTypeChecker();
         if (alreadyWrappedOrContainsInReactHooks(ts, topLevelNode, checker)) {
-            this.logger?.log('Already has hooks');
+            this.logger.log('Already has hooks');
             return undefined;
         }
-        if (!isInFunctionComponent(ts, topLevelNode, checker)) return undefined;
+        if (!isInFunctionComponent(ts, topLevelNode, checker)) {
+            this.logger.log('Not in function component');
+            return undefined;
+        }
 
-        this.logger?.log('TopLevelKind: ' + topLevelNode.kind);
+        this.logger.log('TopLevelKind: ' + topLevelNode.kind);
         if (isFunctionExpressionLike(ts, topLevelNode)) {
             return this.getInfoFromFunctionExpressionLike(
                 topLevelNode,
@@ -217,6 +250,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             );
         }
 
+        this.logger.log('No actions');
         return undefined;
     }
 
@@ -237,8 +271,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   'useMemo'
               )
             : undefined;
-        this.logger?.log('Universal Deps: ' + deps.length);
-        this.logger?.log('hooksReference: ' + JSON.stringify(hooksReference));
+        this.logger.log('Universal Deps: ' + deps.length);
+        this.logger.log('hooksReference: ' + JSON.stringify(hooksReference));
         return {
             kind: RefactorKind.useMemo,
             expression,
@@ -264,7 +298,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   'useCallback'
               )
             : undefined;
-        this.logger?.log('Function Deps: ' + deps.length);
+        this.logger.log('Function Deps: ' + deps.length);
+        this.logger.log('hooksReference: ' + JSON.stringify(hooksReference));
         return {
             kind: RefactorKind.useCallback,
             func,
@@ -387,17 +422,25 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
 
         const compilerOptions = this.info.languageServiceHost.getCompilationSettings();
         if (!this.isValidJsxFlag(compilerOptions.jsx)) {
+            this.logger.log('Jsx options invalid');
             return undefined;
         }
         if (!ts.fileExtensionIs(fileName, ts.Extension.Tsx)) {
+            this.logger.log('Not in tsx');
             return undefined;
         }
 
         const program = this.info.languageService.getProgram();
-        if (!program) return undefined;
+        if (!program) {
+            this.logger.log('Cannot find program');
+            return undefined;
+        }
 
         const file = program.getSourceFile(fileName);
-        if (!file) return undefined;
+        if (!file) {
+            this.logger.log('Cannot find source file');
+            return undefined;
+        }
 
         return {
             file,
@@ -423,7 +466,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             switch (node.kind) {
                 case ts.SyntaxKind.Identifier: {
                     const identifier = node as ts.Identifier;
-                    logger?.log('Found Identifier: ' + identifier.text);
+                    logger.log('Found Identifier: ' + identifier.text);
 
                     const symbol = checker.getSymbolAtLocation(node);
                     if (
@@ -442,7 +485,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     const accessExpression = node as
                         | ts.ElementAccessExpression
                         | ts.PropertyAccessExpression;
-                    logger?.log(
+                    logger.log(
                         'Found accessExpression: ' + accessExpression.getText()
                     );
 
