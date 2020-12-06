@@ -1,5 +1,7 @@
 import type * as ts from 'typescript/lib/tsserverlibrary';
 import { FunctionExpressionLike } from './types';
+import * as path from 'path';
+import { LanguageServiceLogger } from './logger';
 
 export function isDef<T>(v: T | undefined | null): v is T {
     return v !== undefined && v !== null;
@@ -106,7 +108,7 @@ function getSymbol(
     return undefined;
 }
 
-export function getGlobalJsxElementType(
+export function getGlobalJsxElementSymbol(
     typescript: typeof ts,
     checker: ts.TypeChecker
 ) {
@@ -122,6 +124,14 @@ export function getGlobalJsxElementType(
         JsxNames.Element,
         typescript.SymbolFlags.Type
     );
+    return elementSymbol;
+}
+
+export function getGlobalJsxElementType(
+    typescript: typeof ts,
+    checker: ts.TypeChecker
+) {
+    const elementSymbol = getGlobalJsxElementSymbol(typescript, checker);
     return elementSymbol
         ? checker.getDeclaredTypeOfSymbol(elementSymbol)
         : undefined;
@@ -295,7 +305,7 @@ export function isTopLevelConstantDeclaration(
     return false;
 }
 
-export function isDeclarationAssignedByHooks(
+export function isDeclarationAssignedByReactHooks(
     typescript: typeof ts,
     declaration: ts.Declaration,
     pred = isUseSomething
@@ -306,7 +316,7 @@ export function isDeclarationAssignedByHooks(
         typescript.isCallExpression(declaration.initializer)
     ) {
         if (
-            dummyCheckHooks(
+            dummyCheckReactHooks(
                 typescript,
                 declaration.initializer.expression,
                 pred
@@ -322,7 +332,7 @@ export function isDeclarationAssignedByUseRef(
     typescript: typeof ts,
     declaration: ts.Declaration
 ) {
-    return isDeclarationAssignedByHooks(typescript, declaration, isUseRef);
+    return isDeclarationAssignedByReactHooks(typescript, declaration, isUseRef);
 }
 
 export function isDeclarationAssignedByUseState(
@@ -340,7 +350,7 @@ export function isDeclarationAssignedByUseState(
         return (
             typescript.isIdentifier(name) &&
             startsWithIgnoreCase(name.text, 'set') &&
-            isDeclarationAssignedByHooks(
+            isDeclarationAssignedByReactHooks(
                 typescript,
                 declaration.parent.parent,
                 isUseState
@@ -387,10 +397,7 @@ export function createDepSymbolResolver(
 
     function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
         check: if (!cached.has(rawSymbol)) {
-            const symbol =
-                rawSymbol.flags & typescript.SymbolFlags.Alias
-                    ? checker.getAliasedSymbol(rawSymbol)
-                    : rawSymbol;
+            const symbol = skipSymbolAlias(typescript, rawSymbol, checker);
 
             const valueDeclaration = symbol.valueDeclaration;
             if (!valueDeclaration) {
@@ -542,7 +549,7 @@ export function skipParenthesesUp(
     return node;
 }
 
-function alreadyWrappedInHooks(
+function alreadyWrappedInReactHooks(
     typescript: typeof ts,
     node: ts.Node,
     checker: ts.TypeChecker
@@ -556,19 +563,91 @@ function alreadyWrappedInHooks(
         }
 
         const expression = typescript.skipParentheses(parent.expression);
+        const dummyCheckResult = dummyCheckReactHooks(typescript, expression);
         const symbol = checker.getSymbolAtLocation(expression);
-        if (!symbol) {
-            return dummyCheckHooks(typescript, expression);
+        if (!dummyCheckResult || !symbol) {
+            return dummyCheckResult;
         }
 
-        //TODO: check by declaration
-        return dummyCheckHooks(typescript, expression);
+        return dummyCheckResult && !!isReactHooks(typescript, symbol, checker);
     });
 
     return !!maybeHooks;
 }
 
-function alreadyContainsHooks(
+export function getPackageNameOrNamespaceInNodeModules(filename: string) {
+    if (!filename.includes('node_modules')) {
+        return undefined;
+    }
+
+    const paths = filename.split(path.sep);
+    const firstNodeModulesIndex = paths.indexOf('node_modules');
+    const packageNames = paths.slice(firstNodeModulesIndex + 1);
+    const [nameOrNamespace, maybeName] = packageNames;
+    if (nameOrNamespace && maybeName && nameOrNamespace.startsWith('@')) {
+        return [nameOrNamespace, maybeName].join(path.sep);
+    }
+
+    return nameOrNamespace;
+}
+
+export function relativePathContainNodeModules(from: string, to: string) {
+    return path.relative(from, to).includes('node_modules');
+}
+
+export function isReactHooks(
+    typescript: typeof ts,
+    symbol: ts.Symbol,
+    checker: ts.TypeChecker
+) {
+    if (!symbol.valueDeclaration) {
+        return Ternary.Maybe;
+    }
+
+    const globalJsxElementSymbol = getGlobalJsxElementSymbol(
+        typescript,
+        checker
+    );
+    if (!globalJsxElementSymbol) {
+        return Ternary.Maybe;
+    }
+
+    const symbolDeclarationFileName = symbol.valueDeclaration.getSourceFile()
+        .fileName;
+    const symbolPackageName = getPackageNameOrNamespaceInNodeModules(
+        symbolDeclarationFileName
+    );
+    if (!symbolPackageName) {
+        return Ternary.False;
+    }
+
+    const inSamePackage = globalJsxElementSymbol.declarations.some(decl => {
+        const fileName = decl.getSourceFile().fileName;
+        if (fileName === symbolDeclarationFileName) {
+            return true;
+        }
+
+        if (
+            relativePathContainNodeModules(symbolDeclarationFileName, fileName)
+        ) {
+            return false;
+        }
+
+        const jsxElementPackageName = getPackageNameOrNamespaceInNodeModules(
+            fileName
+        );
+        if (!jsxElementPackageName) {
+            return false;
+        }
+        if (jsxElementPackageName === symbolPackageName) {
+            return true;
+        }
+    });
+
+    return inSamePackage ? Ternary.True : Ternary.False;
+}
+
+function alreadyContainsReactHooks(
     typescript: typeof ts,
     node: ts.Node,
     checker: ts.TypeChecker
@@ -581,28 +660,35 @@ function alreadyContainsHooks(
     function visitor(child: ts.Node) {
         if (typescript.isCallExpression(child)) {
             const expression = typescript.skipParentheses(child.expression);
+            const dummyCheckResult = dummyCheckReactHooks(
+                typescript,
+                expression
+            );
             const symbol = checker.getSymbolAtLocation(expression);
-            if (!symbol && dummyCheckHooks(typescript, expression)) {
-                maybeHooks ||= true;
-                return true;
-            } else if (dummyCheckHooks(typescript, expression)) {
-                //TODO: check by declaration
-                maybeHooks ||= true;
-                return true;
-            }
+            if (!symbol)
+                if (!symbol) {
+                    maybeHooks ||= dummyCheckResult;
+                    return dummyCheckResult;
+                } else if (
+                    dummyCheckResult &&
+                    isReactHooks(typescript, symbol, checker)
+                ) {
+                    maybeHooks ||= true;
+                    return true;
+                }
         }
         typescript.forEachChild(child, visitor);
     }
 }
 
-export function alreadyWrappedOrContainsInHooks(
+export function alreadyWrappedOrContainsInReactHooks(
     typescript: typeof ts,
     node: ts.Node,
     checker: ts.TypeChecker
 ) {
     return (
-        alreadyWrappedInHooks(typescript, node, checker) ||
-        alreadyContainsHooks(typescript, node, checker)
+        alreadyWrappedInReactHooks(typescript, node, checker) ||
+        alreadyContainsReactHooks(typescript, node, checker)
     );
 }
 
@@ -630,7 +716,7 @@ export function isUseState(s: string) {
     return compareIgnoreCase(s, 'useState');
 }
 
-export function dummyCheckHooks(
+export function dummyCheckReactHooks(
     typescript: typeof ts,
     expression: ts.Expression,
     pred = isUseSomething
@@ -674,6 +760,16 @@ export type HooksReferenceNameType =
     | IdentifierHooksName
     | PropertyAccessHooksName;
 
+export function skipSymbolAlias(
+    typescript: typeof ts,
+    symbol: ts.Symbol,
+    checker: ts.TypeChecker
+) {
+    return symbol.flags & typescript.SymbolFlags.Alias
+        ? checker.getAliasedSymbol(symbol)
+        : symbol;
+}
+
 export function getHooksNameReferenceType(
     typescript: typeof ts,
     location: ts.Node,
@@ -681,18 +777,57 @@ export function getHooksNameReferenceType(
     hookName: string
 ): HooksReferenceNameType | undefined {
     const meaning = typescript.SymbolFlags.Value | typescript.SymbolFlags.Alias;
-    if (checker.resolveName(hookName, location, meaning, false)) {
+    const identifierSymbol = checker.resolveName(
+        hookName,
+        location,
+        meaning,
+        false
+    );
+    if (
+        identifierSymbol &&
+        isReactHooks(
+            typescript,
+            skipSymbolAlias(typescript, identifierSymbol, checker),
+            checker
+        )
+    ) {
         return {
             type: HooksNameType.useIdentifier
         };
     }
-    if (checker.resolveName('React', location, meaning, false)) {
+    const upperCaseSymbol = checker.resolveName(
+        'React',
+        location,
+        meaning,
+        false
+    );
+    if (
+        upperCaseSymbol &&
+        isReactHooks(
+            typescript,
+            skipSymbolAlias(typescript, upperCaseSymbol, checker),
+            checker
+        )
+    ) {
         return {
             type: HooksNameType.usePropertyAccess,
             name: 'React'
         };
     }
-    if (checker.resolveName('react', location, meaning, false)) {
+    const lowerCaseSymbol = checker.resolveName(
+        'react',
+        location,
+        meaning,
+        false
+    );
+    if (
+        lowerCaseSymbol &&
+        isReactHooks(
+            typescript,
+            skipSymbolAlias(typescript, lowerCaseSymbol, checker),
+            checker
+        )
+    ) {
         return {
             type: HooksNameType.usePropertyAccess,
             name: 'react'
