@@ -6,12 +6,16 @@ import {
     executeAndCompareCodeActionBewteenLabel,
     executeAndCompareCodeActionInLine,
     executeAndNotExistCodeActionBewteenLabel,
-    openProjectFolder,
-    projectFile
+    projectFile,
+    wait
 } from '../tesUtils';
 import { wrapIntoUseMemoActionDescription } from '../../../src/constants';
 
 suite('Use memo test', async () => {
+    suiteSetup(async () => {
+        await wait(1000);
+    });
+
     teardown(async () => {
         await vscode.commands.executeCommand(
             'workbench.action.closeAllEditors'
@@ -19,8 +23,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useMemo/shouldWork.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
@@ -37,8 +39,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with JSX element', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useMemo/shouldWorkWithJsxElement.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionInLine(
@@ -54,8 +54,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with deps', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useMemo/shouldWorkWithDeps.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionInLine(
@@ -71,8 +69,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with constants - value', async () => {
-        await openProjectFolder();
-
         const file = projectFile(
             'cases/useMemo/shouldWorkWithConstatnValue.tsx'
         );
@@ -90,8 +86,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with constants - function', async () => {
-        await openProjectFolder();
-
         const file = projectFile(
             'cases/useMemo/shouldWorkWithConstatnFunction.tsx'
         );
@@ -109,8 +103,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should not work with overlapped hooks', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useMemo/shouldNotWorkOverlap.tsx');
         const editor = await createTestEditor(file);
         await executeAndNotExistCodeActionBewteenLabel(
@@ -123,8 +115,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with named import', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useMemo/shouldWorkWithNamedImport.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
@@ -141,8 +131,6 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with fake hooks', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useMemo/shouldWorkWithFakeHooks.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(

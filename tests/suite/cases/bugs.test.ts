@@ -4,12 +4,16 @@ import * as vscode from 'vscode';
 import {
     createTestEditor,
     executeAndCompareCodeActionBewteenLabel,
-    openProjectFolder,
-    projectFile
+    projectFile,
+    wait
 } from '../tesUtils';
 import { wrapIntoUseMemoActionDescription } from '../../../src/constants';
 
 suite('Regression test', async () => {
+    suiteSetup(async () => {
+        await wait(1000);
+    });
+
     teardown(async () => {
         await vscode.commands.executeCommand(
             'workbench.action.closeAllEditors'
@@ -17,8 +21,6 @@ suite('Regression test', async () => {
     });
 
     test('Should work with #44', async () => {
-        await openProjectFolder();
-
         const file = projectFile(
             'cases/bugs/shouldWorkWithNonValueDeclaration.tsx'
         );

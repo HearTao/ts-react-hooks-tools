@@ -1,4 +1,3 @@
-import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 import {
@@ -6,12 +5,16 @@ import {
     executeAndCompareCodeActionBewteenLabel,
     executeAndNotExistCodeActionBewteenLabel,
     normalizedCompare,
-    openProjectFolder,
-    projectFile
+    projectFile,
+    wait
 } from '../tesUtils';
 import { wrapIntoUseCallbackActionDescription } from '../../../src/constants';
 
 suite('Use callback test', async () => {
+    suiteSetup(async () => {
+        await wait(1000);
+    });
+
     teardown(async () => {
         await vscode.commands.executeCommand(
             'workbench.action.closeAllEditors'
@@ -19,8 +22,6 @@ suite('Use callback test', async () => {
     });
 
     test('Should work', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useCallback/shouldWork.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
@@ -41,8 +42,6 @@ suite('Use callback test', async () => {
     });
 
     test('Should work with deps', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useCallback/shouldWorkWithDeps.tsx');
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
@@ -63,8 +62,6 @@ suite('Use callback test', async () => {
     });
 
     test('Should work with constants', async () => {
-        await openProjectFolder();
-
         const file = projectFile(
             'cases/useCallback/shouldWorkWithConstants.tsx'
         );
@@ -87,8 +84,6 @@ suite('Use callback test', async () => {
     });
 
     test('Should not work with overlapped hooks', async () => {
-        await openProjectFolder();
-
         const file = projectFile('cases/useCallback/shouldNotWorkOverlap.tsx');
         const editor = await createTestEditor(file);
         await executeAndNotExistCodeActionBewteenLabel(
@@ -101,8 +96,6 @@ suite('Use callback test', async () => {
     });
 
     test('Should work with setState and useRef', async () => {
-        await openProjectFolder();
-
         const file = projectFile(
             'cases/useCallback/shouldIgnoreSetStateAndRef.tsx'
         );

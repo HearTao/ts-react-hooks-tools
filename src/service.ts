@@ -62,7 +62,13 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         if (!context) return [];
         const { file, program } = context;
 
-        const info = this.getInfo(startPosition, endPosition, file, program);
+        const info = this.getInfo(
+            startPosition,
+            endPosition,
+            file,
+            program,
+            false
+        );
         if (!info) return [];
 
         if (info.kind === RefactorKind.useCallback) {
@@ -113,7 +119,13 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         if (!context) return undefined;
         const { file, program } = context;
 
-        const info = this.getInfo(startPosition, endPosition, file, program);
+        const info = this.getInfo(
+            startPosition,
+            endPosition,
+            file,
+            program,
+            true
+        );
         if (!info) return undefined;
 
         const formatContext = this.typescript.formatting.getFormatContext(
@@ -152,7 +164,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         startPosition: number,
         endPosition: number,
         file: ts.SourceFile,
-        program: ts.Program
+        program: ts.Program,
+        full: boolean
     ): Info | undefined {
         const ts = this.typescript;
 
@@ -190,7 +203,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             return this.getInfoFromFunctionExpressionLike(
                 topLevelNode,
                 file,
-                checker
+                checker,
+                full
             );
         }
 
@@ -198,7 +212,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             return this.getInfoFromUniversalExpression(
                 topLevelNode,
                 file,
-                checker
+                checker,
+                full
             );
         }
 
@@ -208,15 +223,20 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
     getInfoFromUniversalExpression(
         expression: ts.Expression,
         file: ts.SourceFile,
-        checker: ts.TypeChecker
+        checker: ts.TypeChecker,
+        full: boolean
     ): Info {
-        const deps = this.getOutsideReferences(expression, file, checker);
-        const hooksReference = getHooksNameReferenceType(
-            this.typescript,
-            expression,
-            checker,
-            'useMemo'
-        );
+        const deps = full
+            ? this.getOutsideReferences(expression, file, checker)
+            : [];
+        const hooksReference = full
+            ? getHooksNameReferenceType(
+                  this.typescript,
+                  expression,
+                  checker,
+                  'useMemo'
+              )
+            : undefined;
         this.logger?.log('Universal Deps: ' + deps.length);
         this.logger?.log('hooksReference: ' + JSON.stringify(hooksReference));
         return {
@@ -230,15 +250,20 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
     getInfoFromFunctionExpressionLike(
         func: FunctionExpressionLike,
         file: ts.SourceFile,
-        checker: ts.TypeChecker
+        checker: ts.TypeChecker,
+        full: boolean
     ): Info {
-        const deps = this.getOutsideReferences(func.body, file, checker);
-        const hooksReference = getHooksNameReferenceType(
-            this.typescript,
-            func,
-            checker,
-            'useCallback'
-        );
+        const deps = full
+            ? this.getOutsideReferences(func.body, file, checker)
+            : [];
+        const hooksReference = full
+            ? getHooksNameReferenceType(
+                  this.typescript,
+                  func,
+                  checker,
+                  'useCallback'
+              )
+            : undefined;
         this.logger?.log('Function Deps: ' + deps.length);
         return {
             kind: RefactorKind.useCallback,
