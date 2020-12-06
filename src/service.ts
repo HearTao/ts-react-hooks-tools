@@ -30,7 +30,7 @@ import {
     skipSingleValueDeclaration,
     isExpression,
     wrapIntoJsxExpressionIfNeed,
-    alreadyWrappedOrContainsInHooks,
+    alreadyWrappedOrContainsInReactHooks,
     isInFunctionComponent,
     skipJsxExpression,
     skipJsxTextToken,
@@ -179,7 +179,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         if (ts.isPartOfTypeQuery(topLevelNode)) return undefined;
 
         const checker = program.getTypeChecker();
-        if (alreadyWrappedOrContainsInHooks(ts, topLevelNode, checker)) {
+        if (alreadyWrappedOrContainsInReactHooks(ts, topLevelNode, checker)) {
             this.logger?.log('Already has hooks');
             return undefined;
         }
@@ -218,6 +218,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             'useMemo'
         );
         this.logger?.log('Universal Deps: ' + deps.length);
+        this.logger?.log('hooksReference: ' + JSON.stringify(hooksReference));
         return {
             kind: RefactorKind.useMemo,
             expression,

@@ -139,4 +139,22 @@ suite('Use memo test', async () => {
             'const value = useMemo(() => 1 + 2 + 3, []);'
         );
     });
+
+    test('Should work with fake hooks', async () => {
+        await openProjectFolder();
+
+        const file = projectFile('cases/useMemo/shouldWorkWithFakeHooks.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = React.useMemo(() => 1 + 2 + 3, []);'
+        );
+    });
 });
