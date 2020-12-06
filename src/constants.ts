@@ -9,3 +9,14 @@ export const wrapIntoUseCallbackActionDescription =
 
 export const wrapIntoUseMemoActionName = 'wrapIntoUseMemo';
 export const wrapIntoUseMemoActionDescription = 'Wrap into React.useMemo';
+
+export enum Constants {
+    SetPrefix = 'set',
+    UsePrefix = 'use',
+    NamespacePrefix = '@',
+    React = 'React',
+    ReactLower = 'react',
+    UseRef = 'useRef',
+    UseState = 'useState',
+    NodeModules = 'node_modules'
+}

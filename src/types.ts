@@ -1,5 +1,4 @@
 import type * as ts from 'typescript/lib/tsserverlibrary';
-import { HooksReferenceNameType } from './utils';
 
 export enum RefactorKind {
     useMemo,
@@ -41,3 +40,33 @@ export interface RefactorContext {
     program: ts.Program;
     file: ts.SourceFile;
 }
+
+export namespace JsxNames {
+    export const JSX = 'JSX';
+    export const Element = 'Element';
+}
+
+export const enum Ternary {
+    False = 0,
+    Unknown = 1,
+    Maybe = 3,
+    True = -1
+}
+
+export enum HooksNameType {
+    useIdentifier,
+    usePropertyAccess
+}
+
+export interface IdentifierHooksName {
+    type: HooksNameType.useIdentifier;
+}
+
+export interface PropertyAccessHooksName {
+    type: HooksNameType.usePropertyAccess;
+    name: string;
+}
+
+export type HooksReferenceNameType =
+    | IdentifierHooksName
+    | PropertyAccessHooksName;

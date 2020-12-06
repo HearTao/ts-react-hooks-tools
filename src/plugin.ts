@@ -11,9 +11,7 @@ export class ReactHooksPlugin {
     create(info: ts.server.PluginCreateInfo) {
         this.logger = new LanguageServiceLogger(info);
 
-        this.logger.log(
-            "I'm getting set up now! Check the log for this message."
-        );
+        this.logger.log("I'm getting set up now!");
 
         return new TemplateLanguageServiceProxy(
             new CustomizedLanguageService(info, this.typescript, this.logger)
