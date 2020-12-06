@@ -263,7 +263,7 @@ export async function executeCodeActionProviderCommandInSelection(
 ) {
     const selection = getSelection();
 
-    await wait(3000);
+    await wait(1000);
 
     const codeActions = await executeCodeActionProviderCommand(file, selection);
     return codeActions;
@@ -362,10 +362,6 @@ const projectFolder = vscode.Uri.file(path.resolve(__dirname, '../project'));
 
 export function projectFile(fileName: string) {
     return vscode.Uri.file(path.join(projectFolder.fsPath, fileName));
-}
-
-export async function openProjectFolder() {
-    await vscode.commands.executeCommand('vscode.openFolder', projectFolder);
 }
 
 export function normalizeIndent(str: string) {
