@@ -1,4 +1,5 @@
 import type * as ts from 'typescript/lib/tsserverlibrary';
+import { HooksReferenceNameType } from './utils';
 
 export enum RefactorKind {
     useMemo,
@@ -24,12 +25,14 @@ export interface UseCallbackInfo {
     kind: RefactorKind.useCallback;
     func: FunctionExpressionLike;
     deps: DependExpression[];
+    hooksReference: HooksReferenceNameType | undefined;
 }
 
 export interface UseMemoInfo {
     kind: RefactorKind.useMemo;
     expression: ts.Expression;
     deps: DependExpression[];
+    hooksReference: HooksReferenceNameType | undefined;
 }
 
 export type Info = UseCallbackInfo | UseMemoInfo;

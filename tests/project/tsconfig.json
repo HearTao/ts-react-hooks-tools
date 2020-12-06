@@ -3,6 +3,7 @@
       "target": "es2015",
       "module": "commonjs",
       "moduleResolution": "node",
+      "esModuleInterop": true,
       "jsx": "react",
       "plugins": [
         { "name": "ts-react-hooks-tools" }

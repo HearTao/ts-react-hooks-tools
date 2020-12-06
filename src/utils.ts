@@ -655,3 +655,72 @@ export function dummyCheckHooks(
     }
     return false;
 }
+
+export enum HooksNameType {
+    useIdentifier,
+    usePropertyAccess
+}
+
+export interface IdentifierHooksName {
+    type: HooksNameType.useIdentifier;
+}
+
+export interface PropertyAccessHooksName {
+    type: HooksNameType.usePropertyAccess;
+    name: string;
+}
+
+export type HooksReferenceNameType =
+    | IdentifierHooksName
+    | PropertyAccessHooksName;
+
+export function getHooksNameReferenceType(
+    typescript: typeof ts,
+    location: ts.Node,
+    checker: ts.TypeChecker,
+    hookName: string
+): HooksReferenceNameType | undefined {
+    const meaning = typescript.SymbolFlags.Value | typescript.SymbolFlags.Alias;
+    if (checker.resolveName(hookName, location, meaning, false)) {
+        return {
+            type: HooksNameType.useIdentifier
+        };
+    }
+    if (checker.resolveName('React', location, meaning, false)) {
+        return {
+            type: HooksNameType.usePropertyAccess,
+            name: 'React'
+        };
+    }
+    if (checker.resolveName('react', location, meaning, false)) {
+        return {
+            type: HooksNameType.usePropertyAccess,
+            name: 'react'
+        };
+    }
+    return undefined;
+}
+
+export function createHooksReference(
+    typescript: typeof ts,
+    hooksReference: HooksReferenceNameType | undefined,
+    hooksName: string
+) {
+    const factory = typescript.factory;
+
+    if (!hooksReference) {
+        return factory.createPropertyAccessExpression(
+            factory.createIdentifier('React'),
+            factory.createIdentifier(hooksName)
+        );
+    }
+
+    if (hooksReference.type === HooksNameType.useIdentifier) {
+        return factory.createIdentifier(hooksName);
+    }
+
+    return factory.createPropertyAccessExpression(
+        factory.createIdentifier(hooksReference.name),
+        factory.createIdentifier(hooksName)
+    );
+}

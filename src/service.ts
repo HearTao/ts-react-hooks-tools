@@ -34,7 +34,10 @@ import {
     isInFunctionComponent,
     skipJsxExpression,
     skipJsxTextToken,
-    isDefinitelyNotSupportedToken
+    HooksReferenceNameType,
+    isDefinitelyNotSupportedToken,
+    getHooksNameReferenceType,
+    createHooksReference
 } from './utils';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
@@ -208,11 +211,18 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         checker: ts.TypeChecker
     ): Info {
         const deps = this.getOutsideReferences(expression, file, checker);
+        const hooksReference = getHooksNameReferenceType(
+            this.typescript,
+            expression,
+            checker,
+            'useMemo'
+        );
         this.logger?.log('Universal Deps: ' + deps.length);
         return {
             kind: RefactorKind.useMemo,
             expression,
-            deps
+            deps,
+            hooksReference
         };
     }
 
@@ -222,11 +232,18 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         checker: ts.TypeChecker
     ): Info {
         const deps = this.getOutsideReferences(func.body, file, checker);
+        const hooksReference = getHooksNameReferenceType(
+            this.typescript,
+            func,
+            checker,
+            'useCallback'
+        );
         this.logger?.log('Function Deps: ' + deps.length);
         return {
             kind: RefactorKind.useCallback,
             func,
-            deps
+            deps,
+            hooksReference
         };
     }
 
@@ -235,7 +252,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         file: ts.SourceFile,
         textChangesContext: ts.textChanges.TextChangesContext
     ): ts.RefactorEditInfo {
-        const { deps, func } = info;
+        const { deps, func, hooksReference } = info;
 
         const edits = this.typescript.textChanges.ChangeTracker.with(
             textChangesContext,
@@ -243,7 +260,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 changeTracker.replaceNode(
                     file,
                     func,
-                    this.wrapIntoUseCallback(func, deps)
+                    this.wrapIntoUseCallback(func, deps, hooksReference)
                 );
             }
         );
@@ -258,7 +275,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         file: ts.SourceFile,
         textChangesContext: ts.textChanges.TextChangesContext
     ): ts.RefactorEditInfo {
-        const { deps, expression } = info;
+        const { deps, expression, hooksReference } = info;
 
         const edits = this.typescript.textChanges.ChangeTracker.with(
             textChangesContext,
@@ -266,7 +283,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 changeTracker.replaceNode(
                     file,
                     expression,
-                    this.wrapIntoUseMemo(expression, deps)
+                    this.wrapIntoUseMemo(expression, deps, hooksReference)
                 );
             }
         );
@@ -278,14 +295,16 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
 
     wrapIntoUseCallback(
         expression: FunctionExpressionLike,
-        deps: DependExpression[]
+        deps: DependExpression[],
+        hooksReference: HooksReferenceNameType | undefined
     ) {
         const factory = this.typescript.factory;
 
         const useCallbackCall = factory.createCallExpression(
-            factory.createPropertyAccessExpression(
-                factory.createIdentifier('React'),
-                factory.createIdentifier('useCallback')
+            createHooksReference(
+                this.typescript,
+                hooksReference,
+                'useCallback'
             ),
             undefined,
             [
@@ -302,14 +321,15 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         return useCallbackCall;
     }
 
-    wrapIntoUseMemo(expression: ts.Expression, deps: DependExpression[]) {
+    wrapIntoUseMemo(
+        expression: ts.Expression,
+        deps: DependExpression[],
+        hooksReference: HooksReferenceNameType | undefined
+    ) {
         const factory = this.typescript.factory;
 
         const useMemoCall = factory.createCallExpression(
-            factory.createPropertyAccessExpression(
-                factory.createIdentifier('React'),
-                factory.createIdentifier('useMemo')
-            ),
+            createHooksReference(this.typescript, hooksReference, 'useMemo'),
             undefined,
             [
                 factory.createArrowFunction(

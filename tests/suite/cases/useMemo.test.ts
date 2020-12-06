@@ -6,7 +6,6 @@ import {
     executeAndCompareCodeActionBewteenLabel,
     executeAndCompareCodeActionInLine,
     executeAndNotExistCodeActionBewteenLabel,
-    executeAndNotExistCodeActionInSelection,
     openProjectFolder,
     projectFile
 } from '../tesUtils';
@@ -120,6 +119,24 @@ suite('Use memo test', async () => {
             'a',
             'b',
             wrapIntoUseMemoActionDescription
+        );
+    });
+
+    test('Should work with named import', async () => {
+        await openProjectFolder();
+
+        const file = projectFile('cases/useMemo/shouldWorkWithNamedImport.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = useMemo(() => 1 + 2 + 3, []);'
         );
     });
 });
