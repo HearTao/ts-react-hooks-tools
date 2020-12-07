@@ -8,7 +8,10 @@ import {
     projectFile,
     wait
 } from '../tesUtils';
-import { wrapIntoUseMemoActionDescription } from '../../../src/constants';
+import {
+    wrapIntoUseCallbackActionDescription,
+    wrapIntoUseMemoActionDescription
+} from '../../../src/constants';
 
 suite('Regression test', async () => {
     suiteSetup(async () => {
@@ -79,7 +82,7 @@ suite('Regression test', async () => {
             editor,
             'a',
             'b',
-            wrapIntoUseMemoActionDescription
+            wrapIntoUseCallbackActionDescription
         );
         normalizedCompare(
             result,
