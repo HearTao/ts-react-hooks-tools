@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import {
     createTestEditor,
     executeAndCompareCodeActionBewteenLabel,
+    normalizedCompare,
     projectFile,
     wait
 } from '../tesUtils';
@@ -67,6 +68,44 @@ suite('Regression test', async () => {
         assert.strictEqual(
             result,
             'const vv = React.useMemo(() => value.find(Boolean) ?? 1, [value]);'
+        );
+    });
+
+    test('Should work with #56', async () => {
+        const file = projectFile('cases/bugs/shouldWorkWithInnerParams.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const printEnum = React.useCallback((v: string) => {
+                console.log(Enum[v]);
+            }, []);
+        `
+        );
+    });
+
+    test('Should work with #61', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithDuplicatedUnknown.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = React.useMemo(() => a + a + b, [a, b]);'
         );
     });
 });
