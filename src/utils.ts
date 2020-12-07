@@ -1,5 +1,6 @@
 import type * as ts from 'typescript/lib/tsserverlibrary';
 import {
+    DependExpression,
     FunctionExpressionLike,
     HooksNameType,
     HooksReferenceNameType,
@@ -370,11 +371,13 @@ export function isDeclarationDefinitelyConstants(
 
 export function createDepSymbolResolver(
     typescript: typeof ts,
-    node: ts.Node,
+    scope: ts.Node,
+    additionalScope: readonly ts.Node[],
     file: ts.SourceFile,
     checker: ts.TypeChecker
 ) {
     const cached = new Map<ts.Symbol, boolean>();
+    const textCached = new Set<string>();
 
     return {
         shouldSymbolDefinitelyBeIgnoreInDeps,
@@ -396,7 +399,15 @@ export function createDepSymbolResolver(
                 break check;
             }
 
-            if (typescript.rangeContainsRange(node, valueDeclaration)) {
+            if (typescript.rangeContainsRange(scope, valueDeclaration)) {
+                cached.set(rawSymbol, true);
+                break check;
+            }
+            if (
+                additionalScope.some(s =>
+                    typescript.rangeContainsRange(s, valueDeclaration)
+                )
+            ) {
                 cached.set(rawSymbol, true);
                 break check;
             }
@@ -796,4 +807,19 @@ export function skipTriviaExpression(
         default:
             return expression;
     }
+}
+
+export function dummyDeDuplicateDeps(
+    deps: DependExpression[]
+): DependExpression[] {
+    const dummyTextRecord = new Map<string, DependExpression>();
+
+    deps.forEach(dep => {
+        const text = dep.getText().trim();
+        if (!dummyTextRecord.has(text)) {
+            dummyTextRecord.set(text, dep);
+        }
+    });
+
+    return Array.from(dummyTextRecord.values());
 }

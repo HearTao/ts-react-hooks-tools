@@ -37,7 +37,8 @@ import {
     isDefinitelyNotSupportedToken,
     getHooksNameReferenceType,
     createHooksReference,
-    skipTriviaExpression
+    skipTriviaExpression,
+    dummyDeDuplicateDeps
 } from './utils';
 import { isDef } from './helper';
 
@@ -262,7 +263,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         full: boolean
     ): Info {
         const deps = full
-            ? this.getOutsideReferences(expression, file, checker)
+            ? this.getOutsideReferences(expression, [], file, checker)
             : [];
         const hooksReference = full
             ? getHooksNameReferenceType(
@@ -289,7 +290,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         full: boolean
     ): Info {
         const deps = full
-            ? this.getOutsideReferences(func.body, file, checker)
+            ? this.getOutsideReferences(
+                  func.body,
+                  func.parameters,
+                  file,
+                  checker
+              )
             : [];
         const hooksReference = full
             ? getHooksNameReferenceType(
@@ -372,7 +378,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             [
                 functionExpressionLikeToExpression(this.typescript, expression),
                 factory.createArrayLiteralExpression(
-                    deps.map(
+                    dummyDeDuplicateDeps(deps).map(
                         dep =>
                             cloneDeep(this.typescript, dep) as DependExpression
                     ),
@@ -403,7 +409,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     expression
                 ),
                 factory.createArrayLiteralExpression(
-                    deps.map(
+                    dummyDeDuplicateDeps(deps).map(
                         dep =>
                             cloneDeep(this.typescript, dep) as DependExpression
                     ),
@@ -451,6 +457,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
 
     getOutsideReferences(
         scope: ts.Node,
+        additionalScope: readonly ts.Node[],
         file: ts.SourceFile,
         checker: ts.TypeChecker,
         preferFullAccess: boolean = true
@@ -458,7 +465,13 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const ts = this.typescript;
         const logger = this.logger;
         const references: DependExpression[] = [];
-        const resolver = createDepSymbolResolver(ts, scope, file, checker);
+        const resolver = createDepSymbolResolver(
+            ts,
+            scope,
+            additionalScope,
+            file,
+            checker
+        );
 
         visitor(scope);
         return references;
@@ -501,8 +514,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                                     symbol
                                 ))
                         ) {
-                            references.push(accessExpression);
-                            return;
+                            if (
+                                ts.isPropertyAccessExpression(accessExpression)
+                            ) {
+                                references.push(accessExpression);
+                                return;
+                            }
                         }
                     }
 
