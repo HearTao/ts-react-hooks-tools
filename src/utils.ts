@@ -709,7 +709,8 @@ export function getHooksNameReferenceType(
     typescript: typeof ts,
     location: ts.Node,
     checker: ts.TypeChecker,
-    hookName: string
+    hookName: string,
+    isNewTrasnfromer: boolean
 ): HooksReferenceNameType | undefined {
     const meaning = typescript.SymbolFlags.Value | typescript.SymbolFlags.Alias;
     const identifierSymbol = checker.resolveName(
@@ -718,18 +719,20 @@ export function getHooksNameReferenceType(
         meaning,
         false
     );
-    if (
+    const hasIdentifierReactHooksReference =
         identifierSymbol &&
         isReactHooks(
             typescript,
             skipSymbolAlias(typescript, identifierSymbol, checker),
             checker
-        )
-    ) {
+        );
+    if (isNewTrasnfromer || hasIdentifierReactHooksReference) {
         return {
-            type: HooksNameType.useIdentifier
+            type: HooksNameType.useIdentifier,
+            alreadyHasReference: !!hasIdentifierReactHooksReference
         };
     }
+
     const upperCaseSymbol = checker.resolveName(
         Constants.React,
         location,
@@ -749,49 +752,132 @@ export function getHooksNameReferenceType(
             name: Constants.React
         };
     }
-    const lowerCaseSymbol = checker.resolveName(
-        Constants.ReactLower,
-        location,
-        meaning,
-        false
-    );
-    if (
-        lowerCaseSymbol &&
-        isReactHooks(
-            typescript,
-            skipSymbolAlias(typescript, lowerCaseSymbol, checker),
-            checker
-        )
-    ) {
-        return {
-            type: HooksNameType.usePropertyAccess,
-            name: Constants.ReactLower
-        };
-    }
     return undefined;
 }
 
 export function createHooksReference(
     typescript: typeof ts,
+    sourceFile: ts.SourceFile,
     hooksReference: HooksReferenceNameType | undefined,
     hooksName: string
-) {
+): [
+    ts.Expression,
+    ((textChanges: ts.textChanges.ChangeTracker) => void) | undefined
+] {
     const factory = typescript.factory;
 
     if (!hooksReference) {
-        return factory.createPropertyAccessExpression(
-            factory.createIdentifier(Constants.React),
-            factory.createIdentifier(hooksName)
-        );
+        return [
+            factory.createPropertyAccessExpression(
+                factory.createIdentifier(Constants.React),
+                factory.createIdentifier(hooksName)
+            ),
+            undefined
+        ];
     }
 
     if (hooksReference.type === HooksNameType.useIdentifier) {
-        return factory.createIdentifier(hooksName);
+        const postAction = hooksReference.alreadyHasReference
+            ? undefined
+            : (changeTracker: ts.textChanges.ChangeTracker) => {
+                  findAndInsertReactImport(
+                      typescript,
+                      sourceFile,
+                      hooksName,
+                      changeTracker
+                  );
+              };
+        return [factory.createIdentifier(hooksName), postAction];
     }
 
-    return factory.createPropertyAccessExpression(
-        factory.createIdentifier(hooksReference.name),
-        factory.createIdentifier(hooksName)
+    return [
+        factory.createPropertyAccessExpression(
+            factory.createIdentifier(hooksReference.name),
+            factory.createIdentifier(hooksName)
+        ),
+        undefined
+    ];
+}
+
+export function findAndInsertReactImport(
+    typescript: typeof ts,
+    sourceFile: ts.SourceFile,
+    hooksName: string,
+    changeTracker: ts.textChanges.ChangeTracker
+) {
+    const importStmt = sourceFile.statements.find(stmt => {
+        return (
+            typescript.isImportDeclaration(stmt) &&
+            typescript.isStringLiteral(stmt.moduleSpecifier) &&
+            stmt.moduleSpecifier.text === Constants.ReactModule
+        );
+    });
+
+    const reactImportDeclaration = importStmt as ts.ImportDeclaration;
+    if (
+        !reactImportDeclaration ||
+        !reactImportDeclaration.importClause ||
+        !reactImportDeclaration.importClause.namedBindings ||
+        !typescript.isNamedImports(
+            reactImportDeclaration.importClause.namedBindings
+        )
+    ) {
+        changeTracker.insertNodeAtTopOfFile(
+            sourceFile,
+            generateImportReactDeclaration(typescript, hooksName),
+            false
+        );
+        return;
+    }
+
+    changeTracker.replaceNode(
+        sourceFile,
+        reactImportDeclaration.importClause.namedBindings,
+        insertNameIntoImportDeclaration(
+            typescript,
+            reactImportDeclaration.importClause.namedBindings,
+            hooksName
+        )
+    );
+}
+
+export function insertNameIntoImportDeclaration(
+    typescript: typeof ts,
+    namedImports: ts.NamedImports,
+    hooksName: string
+): ts.NamedImports {
+    const factory = typescript.factory;
+    return factory.updateNamedImports(
+        namedImports,
+        namedImports.elements.concat(
+            factory.createImportSpecifier(
+                undefined,
+                factory.createIdentifier(hooksName)
+            )
+        )
+    );
+}
+
+export function generateImportReactDeclaration(
+    typescript: typeof ts,
+    hooksName: string
+) {
+    const factory = typescript.factory;
+    return factory.createImportDeclaration(
+        undefined,
+        undefined,
+        factory.createImportClause(
+            false,
+            undefined,
+
+            factory.createNamedImports([
+                factory.createImportSpecifier(
+                    undefined,
+                    factory.createIdentifier(hooksName)
+                )
+            ])
+        ),
+        factory.createStringLiteral(Constants.ReactModule)
     );
 }
 

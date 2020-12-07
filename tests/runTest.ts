@@ -10,13 +10,28 @@ async function main() {
 
         // The path to the extension test script
         // Passed to --extensionTestsPath
-        const extensionTestsPath = path.resolve(__dirname, './suite/index');
+        const classicExtensionTestsPath = path.resolve(
+            __dirname,
+            './suite/classic'
+        );
 
         // Download VS Code, unzip it and run the integration test
         await runTests({
             extensionDevelopmentPath,
-            extensionTestsPath,
+            extensionTestsPath: classicExtensionTestsPath,
             launchArgs: [path.resolve(__dirname, './project')]
+        });
+
+        const modernExtensionTestsPath = path.resolve(
+            __dirname,
+            './suite/modern'
+        );
+
+        // Download VS Code, unzip it and run the integration test
+        await runTests({
+            extensionDevelopmentPath,
+            extensionTestsPath: modernExtensionTestsPath,
+            launchArgs: [path.resolve(__dirname, './project-newjsx')]
         });
     } catch (err) {
         console.error('Failed to run tests');

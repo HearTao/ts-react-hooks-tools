@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "target": "es2015",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "esModuleInterop": true,
+      "jsx": "react-jsx",
+      "plugins": [
+        { "name": "ts-react-hooks-tools" }
+      ]
+    }
+  }

@@ -7,8 +7,8 @@ import {
     normalizedCompare,
     projectFile,
     wait
-} from '../tesUtils';
-import { wrapIntoUseCallbackActionDescription } from '../../../src/constants';
+} from '../../tesUtils';
+import { wrapIntoUseCallbackActionDescription } from '../../../../src/constants';
 
 suite('Use callback test', async () => {
     suiteSetup(async () => {

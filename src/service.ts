@@ -8,7 +8,8 @@ import {
     wrapIntoUseCallbackActionName,
     wrapIntoUseCallbackActionDescription,
     wrapIntoUseMemoActionName,
-    wrapIntoUseMemoActionDescription
+    wrapIntoUseMemoActionDescription,
+    Constants
 } from './constants';
 import {
     DependExpression,
@@ -270,7 +271,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   this.typescript,
                   expression,
                   checker,
-                  'useMemo'
+                  'useMemo',
+                  this.isNewJsxTransformer()
               )
             : undefined;
         this.logger.log('Universal Deps: ' + deps.length);
@@ -302,7 +304,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   this.typescript,
                   func,
                   checker,
-                  'useCallback'
+                  'useCallback',
+                  this.isNewJsxTransformer()
               )
             : undefined;
         this.logger.log('Function Deps: ' + deps.length);
@@ -325,10 +328,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const edits = this.typescript.textChanges.ChangeTracker.with(
             textChangesContext,
             changeTracker => {
-                changeTracker.replaceNode(
-                    file,
+                this.wrapIntoUseCallback(
                     func,
-                    this.wrapIntoUseCallback(func, deps, hooksReference)
+                    file,
+                    deps,
+                    hooksReference,
+                    changeTracker
                 );
             }
         );
@@ -348,10 +353,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         const edits = this.typescript.textChanges.ChangeTracker.with(
             textChangesContext,
             changeTracker => {
-                changeTracker.replaceNode(
-                    file,
+                this.wrapIntoUseMemo(
                     expression,
-                    this.wrapIntoUseMemo(expression, deps, hooksReference)
+                    file,
+                    deps,
+                    hooksReference,
+                    changeTracker
                 );
             }
         );
@@ -362,21 +369,25 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
     }
 
     wrapIntoUseCallback(
-        expression: FunctionExpressionLike,
+        func: FunctionExpressionLike,
+        file: ts.SourceFile,
         deps: DependExpression[],
-        hooksReference: HooksReferenceNameType | undefined
+        hooksReference: HooksReferenceNameType | undefined,
+        changeTracker: ts.textChanges.ChangeTracker
     ) {
         const factory = this.typescript.factory;
+        const [referenceExpression, postAction] = createHooksReference(
+            this.typescript,
+            file,
+            hooksReference,
+            Constants.UseCallback
+        );
 
         const useCallbackCall = factory.createCallExpression(
-            createHooksReference(
-                this.typescript,
-                hooksReference,
-                'useCallback'
-            ),
+            referenceExpression,
             undefined,
             [
-                functionExpressionLikeToExpression(this.typescript, expression),
+                functionExpressionLikeToExpression(this.typescript, func),
                 factory.createArrayLiteralExpression(
                     dummyDeDuplicateDeps(deps).map(
                         dep =>
@@ -386,18 +397,28 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 )
             ]
         );
-        return useCallbackCall;
+
+        changeTracker.replaceNode(file, func, useCallbackCall);
+        postAction?.(changeTracker);
     }
 
     wrapIntoUseMemo(
         expression: ts.Expression,
+        file: ts.SourceFile,
         deps: DependExpression[],
-        hooksReference: HooksReferenceNameType | undefined
+        hooksReference: HooksReferenceNameType | undefined,
+        changeTracker: ts.textChanges.ChangeTracker
     ) {
         const factory = this.typescript.factory;
+        const [referenceExpression, postAction] = createHooksReference(
+            this.typescript,
+            file,
+            hooksReference,
+            Constants.UseMemo
+        );
 
         const useMemoCall = factory.createCallExpression(
-            createHooksReference(this.typescript, hooksReference, 'useMemo'),
+            referenceExpression,
             undefined,
             [
                 factory.createArrowFunction(
@@ -417,22 +438,27 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 )
             ]
         );
-        return wrapIntoJsxExpressionIfNeed(
+        const finallyExpression = wrapIntoJsxExpressionIfNeed(
             this.typescript,
             expression,
             useMemoCall
         );
+
+        changeTracker.replaceNode(file, expression, finallyExpression);
+        postAction?.(changeTracker);
     }
 
     getRefactorContext(fileName: string): RefactorContext | undefined {
-        const ts = this.typescript;
-
-        const compilerOptions = this.info.languageServiceHost.getCompilationSettings();
-        if (!this.isValidJsxFlag(compilerOptions.jsx)) {
+        if (!this.isValidJsxFlag()) {
             this.logger.log('Jsx options invalid');
             return undefined;
         }
-        if (!ts.fileExtensionIs(fileName, ts.Extension.Tsx)) {
+        if (
+            !this.typescript.fileExtensionIs(
+                fileName,
+                this.typescript.Extension.Tsx
+            )
+        ) {
             this.logger.log('Not in tsx');
             return undefined;
         }
@@ -536,14 +562,23 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         }
     }
 
-    isValidJsxFlag(jsx?: ts.JsxEmit) {
-        const ts = this.typescript;
-
-        switch (jsx) {
-            case ts.JsxEmit.React:
-            case ts.JsxEmit.ReactJSX:
-            case ts.JsxEmit.ReactJSXDev:
-            case ts.JsxEmit.ReactNative:
+    isValidJsxFlag() {
+        const compilerOptions = this.info.languageServiceHost.getCompilationSettings();
+        switch (compilerOptions.jsx) {
+            case this.typescript.JsxEmit.React:
+            case this.typescript.JsxEmit.ReactJSX:
+            case this.typescript.JsxEmit.ReactJSXDev:
+            case this.typescript.JsxEmit.ReactNative:
+                return true;
+            default:
+                return false;
+        }
+    }
+    isNewJsxTransformer() {
+        const compilerOptions = this.info.languageServiceHost.getCompilationSettings();
+        switch (compilerOptions.jsx) {
+            case this.typescript.JsxEmit.ReactJSX:
+            case this.typescript.JsxEmit.ReactJSXDev:
                 return true;
             default:
                 return false;
