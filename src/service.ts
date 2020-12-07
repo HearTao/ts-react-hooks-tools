@@ -31,12 +31,13 @@ import {
     isExpression,
     wrapIntoJsxExpressionIfNeed,
     alreadyWrappedOrContainsInReactHooks,
-    isInFunctionComponent,
     skipJsxExpression,
+    isInFunctionComponent,
     skipJsxTextToken,
     isDefinitelyNotSupportedToken,
     getHooksNameReferenceType,
-    createHooksReference
+    createHooksReference,
+    skipTriviaExpression
 } from './utils';
 import { isDef } from './helper';
 
@@ -482,7 +483,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 }
                 case ts.SyntaxKind.ElementAccessExpression:
                 case ts.SyntaxKind.PropertyAccessExpression: {
-                    const accessExpression = node as
+                    const accessExpression = skipTriviaExpression(ts, node) as
                         | ts.ElementAccessExpression
                         | ts.PropertyAccessExpression;
                     logger.log(

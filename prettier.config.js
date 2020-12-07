@@ -9,5 +9,5 @@ module.exports = {
     trailingComma: 'none',
     proseWrap: 'always',
     arrowParens: 'avoid',
-    endOfLine: 'crlf'
+    endOfLine: 'lf'
 };

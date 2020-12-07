@@ -783,3 +783,17 @@ export function createHooksReference(
         factory.createIdentifier(hooksName)
     );
 }
+
+export function skipTriviaExpression(
+    typescript: typeof ts,
+    expression: ts.Node
+) {
+    switch (expression.kind) {
+        case typescript.SyntaxKind.AsExpression:
+        case typescript.SyntaxKind.ParenthesizedExpression:
+            return (expression as ts.ParenthesizedExpression | ts.AsExpression)
+                .expression;
+        default:
+            return expression;
+    }
+}
