@@ -60,6 +60,7 @@ export enum HooksNameType {
 
 export interface IdentifierHooksName {
     type: HooksNameType.useIdentifier;
+    alreadyHasReference: boolean;
 }
 
 export interface PropertyAccessHooksName {

@@ -15,8 +15,10 @@ export enum Constants {
     UsePrefix = 'use',
     NamespacePrefix = '@',
     React = 'React',
-    ReactLower = 'react',
+    ReactModule = 'react',
     UseRef = 'useRef',
     UseState = 'useState',
+    UseMemo = 'useMemo',
+    UseCallback = 'useCallback',
     NodeModules = 'node_modules'
 }

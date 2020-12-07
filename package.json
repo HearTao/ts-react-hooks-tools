@@ -17,7 +17,7 @@
   "scripts": {
     "bootstrap": "yarn",
     "bootstrap:plugin": "cd ./plugin && yarn",
-    "bootstrap:test": "cd ./tests/project && yarn",
+    "bootstrap:test": "cd ./tests/project && yarn && cd ./tests/project-newjsx && yarn",
     "bootstrap:all": "yarn bootstrap && yarn bootstrap:plugin && yarn bootstrap:test",
     "bootstrap:release": "yarn bootstrap && yarn bootstrap:plugin",
 
@@ -27,7 +27,7 @@
     "build:release": "yarn build && yarn build:plugin",
     "build:all": "yarn build && yarn build:plugin && yarn build:test",
 
-    "link:test": "yarn link && cd tests/project && yarn link ts-react-hooks-tools",
+    "link:test": "yarn link && cd tests/project && yarn link ts-react-hooks-tools && cd tests/project-newjsx && yarn link ts-react-hooks-tools",
     "link:plugin": "yarn link && cd plugin && yarn link ts-react-hooks-tools",
     "link:all": "yarn link:test && yarn link:plugin",
 

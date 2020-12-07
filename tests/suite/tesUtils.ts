@@ -359,9 +359,16 @@ export async function executeAndCompareCodeActionInLine(
 }
 
 const projectFolder = vscode.Uri.file(path.resolve(__dirname, '../project'));
+const newProjectFolder = vscode.Uri.file(
+    path.resolve(__dirname, '../project-newjsx')
+);
 
 export function projectFile(fileName: string) {
     return vscode.Uri.file(path.join(projectFolder.fsPath, fileName));
+}
+
+export function newProjectFile(fileName: string) {
+    return vscode.Uri.file(path.join(newProjectFolder.fsPath, fileName));
 }
 
 export function normalizeIndent(str: string) {

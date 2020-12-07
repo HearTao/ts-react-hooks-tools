@@ -7,11 +7,11 @@ import {
     normalizedCompare,
     projectFile,
     wait
-} from '../tesUtils';
+} from '../../tesUtils';
 import {
     wrapIntoUseCallbackActionDescription,
     wrapIntoUseMemoActionDescription
-} from '../../../src/constants';
+} from '../../../../src/constants';
 
 suite('Regression test', async () => {
     suiteSetup(async () => {

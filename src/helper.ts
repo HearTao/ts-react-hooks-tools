@@ -51,7 +51,7 @@ export function startsWithIgnoreCase(a: string, b: string) {
 }
 
 export function isReactText(s: string) {
-    return compareIgnoreCase(s, Constants.ReactLower);
+    return compareIgnoreCase(s, Constants.React);
 }
 
 export function isUseSomething(s: string) {

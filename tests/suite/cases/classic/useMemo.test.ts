@@ -8,8 +8,8 @@ import {
     executeAndNotExistCodeActionBewteenLabel,
     projectFile,
     wait
-} from '../tesUtils';
-import { wrapIntoUseMemoActionDescription } from '../../../src/constants';
+} from '../../tesUtils';
+import { wrapIntoUseMemoActionDescription } from '../../../../src/constants';
 
 suite('Use memo test', async () => {
     suiteSetup(async () => {
