@@ -53,4 +53,20 @@ suite('Regression test', async () => {
             'const value = React.useMemo(() => v as 6, [v]);'
         );
     });
+
+    test('Should work with #57', async () => {
+        const file = projectFile('cases/bugs/shouldWorkWithPropertyAccess.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const vv = React.useMemo(() => value.find(Boolean) ?? 1, [value]);'
+        );
+    });
 });

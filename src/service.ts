@@ -502,12 +502,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                                 ))
                         ) {
                             references.push(accessExpression);
+                            return;
                         }
-                        return;
                     }
 
                     if (ts.isPropertyAccessExpression(accessExpression)) {
-                        ts.forEachChild(accessExpression.expression, visitor);
+                        visitor(accessExpression.expression);
                     } else {
                         ts.forEachChild(node, visitor);
                     }
