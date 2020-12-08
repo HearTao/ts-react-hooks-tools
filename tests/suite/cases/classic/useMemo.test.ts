@@ -145,4 +145,20 @@ suite('Use memo test', async () => {
             'const value = React.useMemo(() => 1 + 2 + 3, []);'
         );
     });
+
+    test('Should work with unknown or any', async () => {
+        const file = projectFile('cases/useMemo/shouldWorkCorrectWithUnknownSymbol.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = React.useMemo(() => 1 + 2 + props.value.foo.a, [props.value.foo.a]);'
+        );
+    });
 });
