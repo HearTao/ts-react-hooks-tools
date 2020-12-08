@@ -54,7 +54,7 @@ suite('Regression test', async () => {
         );
         assert.strictEqual(
             result,
-            'const value = React.useMemo(() => v as 6, [v]);'
+            'const value = React.useMemo(() => v, [v]) as 6;'
         );
     });
 

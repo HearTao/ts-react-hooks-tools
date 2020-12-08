@@ -24,6 +24,8 @@ declare module 'typescript/lib/tsserverlibrary' {
         stopAtComments?: boolean
     ): number;
     export function isExpressionNode(node: Node): boolean;
+    export function isAccessExpression(node: Node): node is AccessExpression;
+    export function isPartOfTypeNode(node: Node): boolean;
     export function skipParentheses(node: Expression): Expression;
     export function skipParentheses(node: Node): Node;
     export function isPartOfTypeQuery(node: Node): boolean;

@@ -39,7 +39,9 @@ import {
     getHooksNameReferenceType,
     createHooksReference,
     skipTriviaExpression,
-    dummyDeDuplicateDeps
+    dummyDeDuplicateDeps,
+    shouldExpressionInDeps,
+    isDependExpression
 } from './utils';
 import { isDef } from './helper';
 
@@ -208,9 +210,12 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             return undefined;
         }
 
-        const topLevelNode = skipJsxExpression(
+        const topLevelNode = skipTriviaExpression(
             this.typescript,
-            skipSingleValueDeclaration(this.typescript, rawTopLevelNode)
+            skipJsxExpression(
+                this.typescript,
+                skipSingleValueDeclaration(this.typescript, rawTopLevelNode)
+            )
         );
 
         if (isDefinitelyNotSupportedToken(ts, topLevelNode)) {
@@ -503,18 +508,21 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         return references;
 
         function visitor(node: ts.Node) {
+            if (ts.isTypeNode(node)) {
+                return;
+            }
+
             switch (node.kind) {
                 case ts.SyntaxKind.Identifier: {
                     const identifier = node as ts.Identifier;
                     logger.log('Found Identifier: ' + identifier.text);
-
-                    const symbol = checker.getSymbolAtLocation(node);
                     if (
-                        !symbol ||
-                        (!resolver.alreadyDuplicated(symbol) &&
-                            !resolver.shouldSymbolDefinitelyBeIgnoreInDeps(
-                                symbol
-                            ))
+                        shouldExpressionInDeps(
+                            ts,
+                            identifier,
+                            checker,
+                            resolver
+                        )
                     ) {
                         references.push(identifier);
                     }
@@ -522,37 +530,28 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 }
                 case ts.SyntaxKind.ElementAccessExpression:
                 case ts.SyntaxKind.PropertyAccessExpression: {
-                    const accessExpression = skipTriviaExpression(ts, node) as
-                        | ts.ElementAccessExpression
-                        | ts.PropertyAccessExpression;
+                    const accessExpression = node as ts.PropertyAccessExpression;
                     logger.log(
                         'Found accessExpression: ' + accessExpression.getText()
                     );
 
                     if (preferFullAccess) {
-                        const symbol = checker.getSymbolAtLocation(
-                            accessExpression
-                        );
                         if (
-                            !symbol ||
-                            (!resolver.alreadyDuplicated(symbol) &&
-                                !resolver.shouldSymbolDefinitelyBeIgnoreInDeps(
-                                    symbol
-                                ))
+                            shouldExpressionInDeps(
+                                ts,
+                                accessExpression,
+                                checker,
+                                resolver
+                            )
                         ) {
-                            if (
-                                ts.isPropertyAccessExpression(accessExpression)
-                            ) {
-                                references.push(accessExpression);
-                                return;
-                            }
+                            references.push(accessExpression);
+                            return;
                         }
                     }
-
                     if (ts.isPropertyAccessExpression(accessExpression)) {
                         visitor(accessExpression.expression);
                     } else {
-                        ts.forEachChild(node, visitor);
+                        ts.forEachChild(accessExpression, visitor);
                     }
                     return;
                 }
