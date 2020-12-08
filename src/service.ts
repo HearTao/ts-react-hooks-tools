@@ -40,16 +40,17 @@ import {
     createHooksReference,
     skipTriviaExpression,
     dummyDeDuplicateDeps,
-    shouldExpressionInDeps,
-    isDependExpression
+    shouldExpressionInDeps
 } from './utils';
 import { isDef } from './helper';
+import { ConfigManager } from './config';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
     constructor(
         private readonly info: ts.server.PluginCreateInfo,
         private readonly typescript: typeof ts,
-        private readonly logger: LanguageServiceLogger
+        private readonly logger: LanguageServiceLogger,
+        private readonly configManager: ConfigManager
     ) {}
 
     getApplicableRefactors(
@@ -269,7 +270,13 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         full: boolean
     ): Info {
         const deps = full
-            ? this.getOutsideReferences(expression, [], file, checker)
+            ? this.getOutsideReferences(
+                  expression,
+                  [],
+                  file,
+                  checker,
+                  this.configManager.config.preferFullAccess
+              )
             : [];
         const hooksReference = full
             ? getHooksNameReferenceType(
@@ -301,7 +308,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   func.body,
                   func.parameters,
                   file,
-                  checker
+                  checker,
+                  this.configManager.config.preferFullAccess
               )
             : [];
         const hooksReference = full

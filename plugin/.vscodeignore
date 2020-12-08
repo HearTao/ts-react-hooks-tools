@@ -10,5 +10,6 @@
 **/.github
 **/node_modules
 **/.vscode-test
-!**/node_modules/ts-react-hooks-tools/dist
-!**/node_modules/ts-react-hooks-tools/package.json
+!node_modules/ts-react-hooks-tools/dist/*.js
+!node_modules/ts-react-hooks-tools/package.json
+!./dist/*.js
