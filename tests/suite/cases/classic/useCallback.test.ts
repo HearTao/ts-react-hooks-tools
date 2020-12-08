@@ -117,7 +117,6 @@ suite('Use callback test', async () => {
         );
     });
 
-    
     test('Should work with inner value reference', async () => {
         const file = projectFile(
             'cases/useCallback/shouldWorkCorrectWithInnerValue.tsx'

@@ -147,7 +147,9 @@ suite('Use memo test', async () => {
     });
 
     test('Should work with unknown or any', async () => {
-        const file = projectFile('cases/useMemo/shouldWorkCorrectWithUnknownSymbol.tsx');
+        const file = projectFile(
+            'cases/useMemo/shouldWorkCorrectWithUnknownSymbol.tsx'
+        );
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
             file,
