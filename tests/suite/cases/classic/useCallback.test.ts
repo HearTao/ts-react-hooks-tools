@@ -116,4 +116,54 @@ suite('Use callback test', async () => {
         `
         );
     });
+
+    test('Should work with inner value reference', async () => {
+        const file = projectFile(
+            'cases/useCallback/shouldWorkCorrectWithInnerValue.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                const v = {
+                    value: { foo: { a: props.value } }
+                };
+                console.log(v.value.foo.a);
+            }, [props.value]);
+        `
+        );
+    });
+
+    test('Should work with inner value reference', async () => {
+        const file = projectFile(
+            'cases/useCallback/shouldWorkCorrectWithInnerTypeAnnotation.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                const v: CommonUnknownProps = {
+                    value: { foo: { a: props.value } }
+                };
+                console.log(v.value.foo.a);
+            }, [props.value]);
+        `
+        );
+    });
 });

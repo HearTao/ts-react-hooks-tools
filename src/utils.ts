@@ -8,6 +8,7 @@ import {
     Ternary
 } from './types';
 import {
+    assertDef,
     first,
     getPackageNameOrNamespaceInNodeModules,
     isReactText,
@@ -18,6 +19,7 @@ import {
     startsWithIgnoreCase
 } from './helper';
 import { Constants } from './constants';
+import { LanguageServiceLogger } from './logger';
 
 export function getRangeOfPositionOrRange(
     positionOrRange: number | ts.TextRange
@@ -369,15 +371,25 @@ export function isDeclarationDefinitelyConstants(
     return;
 }
 
+export interface DepSymbolResolver {
+    shouldSymbolDefinitelyBeIgnoreInDeps: (
+        rawSymbol: ts.Symbol
+    ) => boolean | undefined;
+    alreadyDuplicated: (rawSymbol: ts.Symbol) => boolean;
+}
+
+export function isInTypeContext(typescript: typeof ts, node: ts.Node) {
+    return typescript.isTypeElement(node) || typescript.isPartOfTypeNode(node);
+}
+
 export function createDepSymbolResolver(
     typescript: typeof ts,
     scope: ts.Node,
     additionalScope: readonly ts.Node[],
     file: ts.SourceFile,
     checker: ts.TypeChecker
-) {
+): DepSymbolResolver {
     const cached = new Map<ts.Symbol, boolean>();
-    const textCached = new Set<string>();
 
     return {
         shouldSymbolDefinitelyBeIgnoreInDeps,
@@ -394,7 +406,19 @@ export function createDepSymbolResolver(
                 break check;
             }
 
-            if (valueDeclaration.getSourceFile() !== file) {
+            const declFile = valueDeclaration.getSourceFile();
+            if (declFile.isDeclarationFile) {
+                cached.set(rawSymbol, true);
+                break check;
+            }
+
+            const inTypeContext = isInTypeContext(typescript, valueDeclaration);
+            if (inTypeContext) {
+                cached.set(rawSymbol, false);
+                break check;
+            }
+
+            if (declFile !== file) {
                 cached.set(rawSymbol, true);
                 break check;
             }
@@ -403,6 +427,7 @@ export function createDepSymbolResolver(
                 cached.set(rawSymbol, true);
                 break check;
             }
+
             if (
                 additionalScope.some(s =>
                     typescript.rangeContainsRange(s, valueDeclaration)
@@ -908,4 +933,63 @@ export function dummyDeDuplicateDeps(
     });
 
     return Array.from(dummyTextRecord.values());
+}
+
+export function isDependExpression(
+    typescript: typeof ts,
+    expr: ts.Expression
+): expr is DependExpression {
+    return typescript.isIdentifier(expr) || typescript.isAccessExpression(expr);
+}
+
+export function shouldExpressionInDeps(
+    typescript: typeof ts,
+    expression: DependExpression,
+    checker: ts.TypeChecker,
+    resolver: DepSymbolResolver
+) {
+    switch (expression.kind) {
+        case typescript.SyntaxKind.Identifier: {
+            const symbol = checker.getSymbolAtLocation(expression);
+            if (symbol) {
+                return shouldSymbolBeIgnore(symbol)
+                    ? Ternary.False
+                    : Ternary.True;
+            }
+            return Ternary.Maybe;
+        }
+        case typescript.SyntaxKind.PropertyAccessExpression:
+        case typescript.SyntaxKind.ElementAccessExpression: {
+            const accessExpression = expression as ts.AccessExpression;
+
+            const symbol = checker.getSymbolAtLocation(accessExpression);
+            if (symbol && shouldSymbolBeIgnore(symbol)) {
+                return Ternary.False;
+            }
+
+            let topLevelAccessExpression: ts.Expression =
+                accessExpression.expression;
+            while (typescript.isAccessExpression(topLevelAccessExpression)) {
+                topLevelAccessExpression = topLevelAccessExpression.expression;
+            }
+            const topLevelSymbol = checker.getSymbolAtLocation(
+                topLevelAccessExpression
+            );
+            if (
+                topLevelSymbol &&
+                resolver.shouldSymbolDefinitelyBeIgnoreInDeps(topLevelSymbol)
+            ) {
+                return Ternary.False;
+            }
+
+            return Ternary.Maybe;
+        }
+    }
+
+    function shouldSymbolBeIgnore(symbol: ts.Symbol) {
+        return (
+            resolver.alreadyDuplicated(symbol) ||
+            resolver.shouldSymbolDefinitelyBeIgnoreInDeps(symbol)
+        );
+    }
 }

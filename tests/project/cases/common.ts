@@ -7,3 +7,9 @@ export function useMemo(...values: unknown[]): never {
 export interface CommonProps {
     value: number[];
 }
+
+export interface CommonUnknownProps {
+    value: {
+        foo: any;
+    };
+}
