@@ -14,6 +14,10 @@ import { wrapIntoUseMemoActionDescription } from '../../../../src/constants';
 suite('Use memo test', async () => {
     suiteSetup(async () => {
         await wait(1000);
+
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferFullAccess', true);
     });
 
     teardown(async () => {

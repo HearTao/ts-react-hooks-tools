@@ -12,6 +12,12 @@
     "engines": {
         "vscode": "^1.34.0"
     },
+    "main": "./dist/index.js",
+    "keywords": [
+        "typescript",
+        "ts",
+        "react"
+    ],
     "categories": [
         "Programming Languages"
     ],
@@ -21,11 +27,27 @@
                 "name": "ts-react-hooks-tools",
                 "enableForWorkspaceTypeScriptVersions": true
             }
-        ]
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "TypeScript React hooks tools",
+            "properties": {
+                "trht.preferFullAccess": {
+                    "type": "boolean",
+                    "description": "Control whether collect access expression dependencies or only identifier",
+                    "default": true
+                }
+            }
+        }
     },
+    "activationEvents": [
+        "onLanguage:typescript",
+        "onLanguage:typescriptreact"
+    ],
     "scripts": {
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "build": "vsce package"
+        "build:script": "tsc",
+        "build": "yarn build:script && vsce package"
     },
     "devDependencies": {
         "typescript": "^4.1.2",

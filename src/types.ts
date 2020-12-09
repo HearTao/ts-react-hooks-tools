@@ -71,3 +71,7 @@ export interface PropertyAccessHooksName {
 export type HooksReferenceNameType =
     | IdentifierHooksName
     | PropertyAccessHooksName;
+
+export interface SynchronizedConfiguration {
+    preferFullAccess?: boolean;
+}
