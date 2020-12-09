@@ -12,10 +12,13 @@ import {
     first,
     getPackageNameOrNamespaceInNodeModules,
     isReactText,
+    isUseCallback,
+    isUseMemo,
     isUseRef,
     isUseSomething,
     isUseState,
     relativePathContainNodeModules,
+    returnTrue,
     startsWithIgnoreCase
 } from './helper';
 import { Constants } from './constants';
@@ -303,7 +306,8 @@ export function isTopLevelConstantDeclaration(
 export function isDeclarationAssignedByReactHooks(
     typescript: typeof ts,
     declaration: ts.Declaration,
-    pred = isUseSomething
+    pred = isUseSomething,
+    hookCallPred: (initializer: ts.CallExpression) => boolean = returnTrue
 ) {
     if (
         typescript.isVariableDeclaration(declaration) &&
@@ -315,7 +319,8 @@ export function isDeclarationAssignedByReactHooks(
                 typescript,
                 declaration.initializer.expression,
                 pred
-            )
+            ) &&
+            hookCallPred(declaration.initializer)
         ) {
             return true;
         }
@@ -353,6 +358,48 @@ export function isDeclarationAssignedByUseState(
         );
     }
     return false;
+}
+
+export function isDeclarationAssignedByConstantsUseMemo(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    return isDeclarationAssignedByReactHooks(
+        typescript,
+        declaration,
+        isUseMemo,
+        hookCall => {
+            if (hookCall.arguments.length === 2) {
+                const secondArgument = hookCall.arguments[1];
+                return (
+                    typescript.isArrayLiteralExpression(secondArgument) &&
+                    !secondArgument.elements.length
+                );
+            }
+            return false;
+        }
+    );
+}
+
+export function isDeclarationAssignedByConstantsUseCallback(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    return isDeclarationAssignedByReactHooks(
+        typescript,
+        declaration,
+        isUseCallback,
+        hookCall => {
+            if (hookCall.arguments.length === 2) {
+                const secondArgument = hookCall.arguments[1];
+                return (
+                    typescript.isArrayLiteralExpression(secondArgument) &&
+                    !secondArgument.elements.length
+                );
+            }
+            return false;
+        }
+    );
 }
 
 export function isDeclarationDefinitelyConstants(
@@ -452,7 +499,15 @@ export function createDepSymbolResolver(
 
             if (
                 isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
-                isDeclarationAssignedByUseState(typescript, valueDeclaration)
+                isDeclarationAssignedByUseState(typescript, valueDeclaration) ||
+                isDeclarationAssignedByConstantsUseMemo(
+                    typescript,
+                    valueDeclaration
+                ) ||
+                isDeclarationAssignedByConstantsUseCallback(
+                    typescript,
+                    valueDeclaration
+                )
             ) {
                 cached.set(rawSymbol, true);
                 break check;

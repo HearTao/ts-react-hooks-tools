@@ -170,4 +170,27 @@ suite('Use callback test', async () => {
         `
         );
     });
+
+    test('Should work with memoized constant hooks', async () => {
+        const file = projectFile(
+            'cases/useCallback/shouldWorkWithConstantUseMemoOrCallback.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                console.log(memoizedValue);
+                memoizedFunction();
+            }, []);
+        `
+        );
+    });
 });

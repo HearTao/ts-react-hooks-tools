@@ -65,3 +65,15 @@ export function isUseRef(s: string) {
 export function isUseState(s: string) {
     return compareIgnoreCase(s, Constants.UseState);
 }
+
+export function isUseMemo(s: string) {
+    return compareIgnoreCase(s, Constants.UseMemo);
+}
+
+export function isUseCallback(s: string) {
+    return compareIgnoreCase(s, Constants.UseCallback);
+}
+
+export function returnTrue() {
+    return true;
+}
