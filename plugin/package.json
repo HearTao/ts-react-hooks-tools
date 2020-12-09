@@ -30,7 +30,7 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "ReactHooksTools",
+            "title": "TypeScript React hooks tools",
             "properties": {
                 "trht.preferFullAccess": {
                     "type": "boolean",
