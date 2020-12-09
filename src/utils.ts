@@ -231,7 +231,10 @@ export function isDefinitelyNotSupportedToken(
 export function functionExpressionLikeToExpression(
     typescript: typeof ts,
     func: FunctionExpressionLike
-): [Exclude<FunctionExpressionLike, ts.FunctionDeclaration>, ts.Identifier | undefined] {
+): [
+    Exclude<FunctionExpressionLike, ts.FunctionDeclaration>,
+    ts.Identifier | undefined
+] {
     switch (func.kind) {
         case typescript.SyntaxKind.FunctionDeclaration:
             return [
@@ -401,7 +404,10 @@ export function createDepSymbolResolver(
 
     function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
         check: if (!cached.has(rawSymbol)) {
-            if (checker.isUndefinedSymbol(rawSymbol) || checker.isArgumentsSymbol(rawSymbol)) {
+            if (
+                checker.isUndefinedSymbol(rawSymbol) ||
+                checker.isArgumentsSymbol(rawSymbol)
+            ) {
                 cached.set(rawSymbol, true);
                 break check;
             }

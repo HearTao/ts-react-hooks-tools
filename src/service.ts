@@ -396,7 +396,10 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             Constants.UseCallback
         );
 
-        const [ functionExpression, name ] = functionExpressionLikeToExpression(this.typescript, func)
+        const [functionExpression, name] = functionExpressionLikeToExpression(
+            this.typescript,
+            func
+        );
 
         const useCallbackCall = factory.createCallExpression(
             referenceExpression,
@@ -412,26 +415,34 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 )
             ]
         );
-        
-        const useCallbackDeclaration = name ? this.wrapIntoVairableDeclaration(name, useCallbackCall) : useCallbackCall;
+
+        const useCallbackDeclaration = name
+            ? this.wrapIntoVairableDeclaration(name, useCallbackCall)
+            : useCallbackCall;
         changeTracker.replaceNode(file, func, useCallbackDeclaration);
         postAction?.(changeTracker);
     }
 
-    wrapIntoVairableDeclaration(name: ts.Identifier, initializer: ts.Expression) {
+    wrapIntoVairableDeclaration(
+        name: ts.Identifier,
+        initializer: ts.Expression
+    ) {
         const factory = this.typescript.factory;
         return factory.createVariableStatement(
             undefined,
-            factory.createVariableDeclarationList([
-                factory.createVariableDeclaration(
-                    factory.createIdentifier(name.text),
-                    undefined,
-                    undefined,
-    
-                    initializer
-                )
-            ], this.typescript.NodeFlags.Const)
-        )
+            factory.createVariableDeclarationList(
+                [
+                    factory.createVariableDeclaration(
+                        factory.createIdentifier(name.text),
+                        undefined,
+                        undefined,
+
+                        initializer
+                    )
+                ],
+                this.typescript.NodeFlags.Const
+            )
+        );
     }
 
     wrapIntoUseMemo(

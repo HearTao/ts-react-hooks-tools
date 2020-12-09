@@ -117,7 +117,9 @@ suite('Regression test', async () => {
     });
 
     test('Should work with #71', async () => {
-        const file = projectFile('cases/bugs/shouldWorkWithLiteralUndefined.tsx');
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithLiteralUndefined.tsx'
+        );
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
             file,
@@ -133,7 +135,9 @@ suite('Regression test', async () => {
     });
 
     test('Should work with #71 - arguments & #76', async () => {
-        const file = projectFile('cases/bugs/shouldWorkWithFunctionDeclarationAndLiteralArguments.tsx');
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithFunctionDeclarationAndLiteralArguments.tsx'
+        );
         const editor = await createTestEditor(file);
         const result = await executeAndCompareCodeActionBewteenLabel(
             file,
