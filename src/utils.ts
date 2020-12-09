@@ -222,12 +222,14 @@ export function isDefinitelyNotSupportedToken(
     switch (node.kind) {
         case typescript.SyntaxKind.JsxOpeningFragment:
         case typescript.SyntaxKind.JsxClosingFragment:
-        case typescript.SyntaxKind.JsxOpeningElement:
-        case typescript.SyntaxKind.JsxClosingElement:
         case typescript.SyntaxKind.JsxText:
             return true;
-        default:
+        case typescript.SyntaxKind.Identifier:
+        case typescript.SyntaxKind.ThisKeyword:
+        case typescript.SyntaxKind.PropertyAccessExpression:
             return isInTagNameExpression(typescript, node);
+        default:
+            return false;
     }
 }
 
