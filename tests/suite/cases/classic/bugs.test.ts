@@ -171,4 +171,48 @@ suite('Regression test', async () => {
             '{React.useMemo(() => <span id={id}>Foo</span>, [id])}'
         );
     });
+
+    test('Should work with #74', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithOverlappedAccess.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                console.log(v, v.undefined);
+            }, [v]);
+        `
+        );
+    });
+
+    test('Should work with #74 - reversed', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithOverlappedAccessReversed.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                console.log(v.undefined, v);
+            }, [v]);
+        `
+        );
+    });
 });
