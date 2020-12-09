@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import {
     createTestEditor,
     executeAndCompareCodeActionBewteenLabel,
+    executeAndCompareCodeActionInLine,
     normalizedCompare,
     projectFile,
     wait
@@ -153,6 +154,21 @@ suite('Regression test', async () => {
                 console.log(arguments, 123);
             }, []);
         `
+        );
+    });
+
+    test('Should work with #81', async () => {
+        const file = projectFile('cases/bugs/shouldWorkWithJsxAttribute.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionInLine(
+            file,
+            editor,
+            7,
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            '{React.useMemo(() => <span id={id}>Foo</span>, [id])}'
         );
     });
 });
