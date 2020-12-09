@@ -115,4 +115,40 @@ suite('Regression test', async () => {
             'const value = React.useMemo(() => a + a + b, [a, b]);'
         );
     });
+
+    test('Should work with #71', async () => {
+        const file = projectFile('cases/bugs/shouldWorkWithLiteralUndefined.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = React.useMemo(() => 1 + undefinedProp.undefined === undefined ? "string literl" : null, [undefinedProp.undefined]);'
+        );
+    });
+
+    test('Should work with #71 - arguments & #76', async () => {
+        const file = projectFile('cases/bugs/shouldWorkWithFunctionDeclarationAndLiteralArguments.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(function onClick() {
+                console.log(arguments, 123);
+            }, []);
+        `
+        );
+    });
 });
