@@ -231,20 +231,26 @@ export function isDefinitelyNotSupportedToken(
 export function functionExpressionLikeToExpression(
     typescript: typeof ts,
     func: FunctionExpressionLike
-): Exclude<FunctionExpressionLike, ts.FunctionDeclaration> {
+): [
+    Exclude<FunctionExpressionLike, ts.FunctionDeclaration>,
+    ts.Identifier | undefined
+] {
     switch (func.kind) {
         case typescript.SyntaxKind.FunctionDeclaration:
-            return typescript.factory.createFunctionExpression(
-                func.modifiers,
-                func.asteriskToken,
-                func.name,
-                func.typeParameters,
-                func.parameters,
-                func.type,
-                func.body
-            );
+            return [
+                typescript.factory.createFunctionExpression(
+                    func.modifiers,
+                    func.asteriskToken,
+                    func.name,
+                    func.typeParameters,
+                    func.parameters,
+                    func.type,
+                    func.body
+                ),
+                func.name
+            ];
         default:
-            return func;
+            return [func, undefined];
     }
 }
 
@@ -398,8 +404,15 @@ export function createDepSymbolResolver(
 
     function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
         check: if (!cached.has(rawSymbol)) {
-            const symbol = skipSymbolAlias(typescript, rawSymbol, checker);
+            if (
+                checker.isUndefinedSymbol(rawSymbol) ||
+                checker.isArgumentsSymbol(rawSymbol)
+            ) {
+                cached.set(rawSymbol, true);
+                break check;
+            }
 
+            const symbol = skipSymbolAlias(typescript, rawSymbol, checker);
             const valueDeclaration = symbol.valueDeclaration;
             if (!valueDeclaration) {
                 cached.set(rawSymbol, false);
@@ -950,7 +963,8 @@ export function shouldExpressionInDeps(
 ) {
     switch (expression.kind) {
         case typescript.SyntaxKind.Identifier: {
-            const symbol = checker.getSymbolAtLocation(expression);
+            const identifier = expression as ts.Identifier;
+            const symbol = checker.getSymbolAtLocation(identifier);
             if (symbol) {
                 return shouldSymbolBeIgnore(symbol)
                     ? Ternary.False
