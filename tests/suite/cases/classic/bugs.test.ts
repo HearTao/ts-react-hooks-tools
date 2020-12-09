@@ -130,7 +130,7 @@ suite('Regression test', async () => {
         );
         assert.strictEqual(
             result,
-            'const value = React.useMemo(() => 1 + undefinedProp.undefined === undefined ? "string literl" : null, [undefinedProp.undefined]);'
+            'const value = React.useMemo(() => v.undefined ? undefined : null, [v.undefined]);'
         );
     });
 

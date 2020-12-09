@@ -1,13 +1,10 @@
 import * as React from 'react';
 
 export const Comp: React.FC = () => {
-    const undefinedProp = {
+    const v = {
         undefined: 1
     };
-    /*[a]*/ const value =
-        1 + undefinedProp.undefined === undefined
-            ? 'string literl'
-            : null; /*[b]*/
+    /*[a]*/ const value = v.undefined ? undefined : null; /*[b]*/
 
     return (
         <div>
