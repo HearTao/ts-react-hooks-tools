@@ -40,7 +40,8 @@ import {
     createHooksReference,
     skipTriviaExpression,
     dummyDeDuplicateDeps,
-    shouldExpressionInDeps
+    shouldExpressionInDeps,
+    dummyCheckReactHooks
 } from './utils';
 import { isDef } from './helper';
 import { ConfigManager } from './config';
@@ -407,7 +408,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             [
                 functionExpression,
                 factory.createArrayLiteralExpression(
-                    dummyDeDuplicateDeps(deps).map(
+                    deps.map(
                         dep =>
                             cloneDeep(this.typescript, dep) as DependExpression
                     ),
@@ -473,7 +474,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     expression
                 ),
                 factory.createArrayLiteralExpression(
-                    dummyDeDuplicateDeps(deps).map(
+                    deps.map(
                         dep =>
                             cloneDeep(this.typescript, dep) as DependExpression
                     ),
@@ -543,7 +544,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         );
 
         visitor(scope);
-        return references;
+        return dummyDeDuplicateDeps(ts, references, logger);
 
         function visitor(node: ts.Node) {
             if (ts.isTypeNode(node)) {

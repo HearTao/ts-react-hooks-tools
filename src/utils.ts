@@ -9,6 +9,7 @@ import {
 } from './types';
 import {
     assertDef,
+    cast,
     first,
     getPackageNameOrNamespaceInNodeModules,
     isReactText,
@@ -430,6 +431,7 @@ export interface DepSymbolResolver {
     shouldSymbolDefinitelyBeIgnoreInDeps: (
         rawSymbol: ts.Symbol
     ) => boolean | undefined;
+    peekSymbolDefinitelyBeIgnoreInDeps: (rawSymbol: ts.Symbol) => boolean;
     alreadyDuplicated: (rawSymbol: ts.Symbol) => boolean;
 }
 
@@ -448,86 +450,81 @@ export function createDepSymbolResolver(
 
     return {
         shouldSymbolDefinitelyBeIgnoreInDeps,
-        alreadyDuplicated
+        alreadyDuplicated,
+        peekSymbolDefinitelyBeIgnoreInDeps
     };
 
+    function peekSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
+        if (
+            checker.isUndefinedSymbol(rawSymbol) ||
+            checker.isArgumentsSymbol(rawSymbol)
+        ) {
+            return true;
+        }
+
+        const symbol = skipSymbolAlias(typescript, rawSymbol, checker);
+        const valueDeclaration = symbol.valueDeclaration;
+        if (!valueDeclaration) {
+            return false;
+        }
+
+        const declFile = valueDeclaration.getSourceFile();
+        if (declFile.isDeclarationFile) {
+            return true;
+        }
+
+        const inTypeContext = isInTypeContext(typescript, valueDeclaration);
+        if (inTypeContext) {
+            return false;
+        }
+
+        if (declFile !== file) {
+            return true;
+        }
+
+        if (typescript.rangeContainsRange(scope, valueDeclaration)) {
+            return true;
+        }
+
+        if (
+            additionalScope.some(s =>
+                typescript.rangeContainsRange(s, valueDeclaration)
+            )
+        ) {
+            return true;
+        }
+
+        if (
+            isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
+            isDeclarationAssignedByUseState(typescript, valueDeclaration) ||
+            isDeclarationAssignedByConstantsUseMemo(
+                typescript,
+                valueDeclaration
+            ) ||
+            isDeclarationAssignedByConstantsUseCallback(
+                typescript,
+                valueDeclaration
+            )
+        ) {
+            return true;
+        }
+
+        if (isDeclarationDefinitelyConstants(typescript, valueDeclaration)) {
+            return true;
+        }
+
+        if (isTopLevelConstantDeclaration(typescript, valueDeclaration)) {
+            return true;
+        }
+        return false;
+    }
+
     function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
-        check: if (!cached.has(rawSymbol)) {
-            if (
-                checker.isUndefinedSymbol(rawSymbol) ||
-                checker.isArgumentsSymbol(rawSymbol)
-            ) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            const symbol = skipSymbolAlias(typescript, rawSymbol, checker);
-            const valueDeclaration = symbol.valueDeclaration;
-            if (!valueDeclaration) {
-                cached.set(rawSymbol, false);
-                break check;
-            }
-
-            const declFile = valueDeclaration.getSourceFile();
-            if (declFile.isDeclarationFile) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            const inTypeContext = isInTypeContext(typescript, valueDeclaration);
-            if (inTypeContext) {
-                cached.set(rawSymbol, false);
-                break check;
-            }
-
-            if (declFile !== file) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            if (typescript.rangeContainsRange(scope, valueDeclaration)) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            if (
-                additionalScope.some(s =>
-                    typescript.rangeContainsRange(s, valueDeclaration)
-                )
-            ) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            if (
-                isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
-                isDeclarationAssignedByUseState(typescript, valueDeclaration) ||
-                isDeclarationAssignedByConstantsUseMemo(
-                    typescript,
-                    valueDeclaration
-                ) ||
-                isDeclarationAssignedByConstantsUseCallback(
-                    typescript,
-                    valueDeclaration
-                )
-            ) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            if (
-                isDeclarationDefinitelyConstants(typescript, valueDeclaration)
-            ) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            if (isTopLevelConstantDeclaration(typescript, valueDeclaration)) {
-                cached.set(rawSymbol, true);
-                break check;
-            }
-
-            cached.set(rawSymbol, false);
+        if (!cached.has(rawSymbol)) {
+            cached.set(
+                rawSymbol,
+                peekSymbolDefinitelyBeIgnoreInDeps(rawSymbol)
+            );
         }
 
         return cached.get(rawSymbol);
@@ -990,19 +987,69 @@ export function skipTriviaExpression(
     }
 }
 
-export function dummyDeDuplicateDeps(
-    deps: DependExpression[]
-): DependExpression[] {
-    const dummyTextRecord = new Map<string, DependExpression>();
-
-    deps.forEach(dep => {
-        const text = dep.getText().trim();
-        if (!dummyTextRecord.has(text)) {
-            dummyTextRecord.set(text, dep);
+export function splitDependExpression(
+    typescript: typeof ts,
+    dep: DependExpression
+) {
+    let rightMost = true;
+    const result: [ts.Expression, boolean][] = [];
+    check: while (true) {
+        branch: switch (dep.kind) {
+            case typescript.SyntaxKind.Identifier:
+                result.unshift([dep, rightMost]);
+                break check;
+            case typescript.SyntaxKind.PropertyAccessExpression:
+                result.unshift([
+                    cast(dep.name, typescript.isIdentifier),
+                    rightMost
+                ]);
+                break branch;
+            case typescript.SyntaxKind.ElementAccessExpression:
+                result.unshift([dep.argumentExpression, rightMost]);
+                break branch;
         }
-    });
+        if (!isDependExpression(typescript, dep.expression)) {
+            break;
+        }
+        dep = dep.expression;
+        rightMost = false;
+    }
+    return result;
+}
 
-    return Array.from(dummyTextRecord.values());
+export function dummyDeDuplicateDeps(
+    typescript: typeof ts,
+    deps: DependExpression[],
+    logger: LanguageServiceLogger
+): DependExpression[] {
+    const splited = deps.map(
+        dep => [splitDependExpression(typescript, dep), dep] as const
+    );
+    const sorted = splited.sort(([a], [b]) => a.length - b.length);
+
+    const visited = new Set<string>();
+    const result: DependExpression[] = [];
+    sorted.forEach(([parts, dep]) => {
+        let lastText = '';
+        for (const [part, rightMost] of parts) {
+            const text = [lastText, getExpressionText(part).trim()]
+                .filter(Boolean)
+                .join(':');
+            if (visited.has(text)) {
+                return;
+            }
+            if (rightMost) {
+                visited.add(text);
+            }
+            lastText = text;
+        }
+        result.push(dep);
+    });
+    return result;
+
+    function getExpressionText(node: ts.Expression) {
+        return typescript.isIdentifier(node) ? node.text : node.getText();
+    }
 }
 
 export function isDependExpression(
@@ -1048,7 +1095,7 @@ export function shouldExpressionInDeps(
             );
             if (
                 topLevelSymbol &&
-                resolver.shouldSymbolDefinitelyBeIgnoreInDeps(topLevelSymbol)
+                resolver.peekSymbolDefinitelyBeIgnoreInDeps(topLevelSymbol)
             ) {
                 return Ternary.False;
             }

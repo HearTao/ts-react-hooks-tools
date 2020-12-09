@@ -77,3 +77,10 @@ export function isUseCallback(s: string) {
 export function returnTrue() {
     return true;
 }
+
+export function cast<T, U extends T>(v: T, cb: (a: T) => a is U): U {
+    if (!cb(v)) {
+        throw new Error('Invalid cast');
+    }
+    return v;
+}
