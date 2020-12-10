@@ -146,7 +146,7 @@ suite('Use callback test', async () => {
         );
     });
 
-    test('Should work with inner value reference', async () => {
+    test('Should work with inner value reference - contains type', async () => {
         const file = projectFile(
             'cases/useCallback/shouldWorkCorrectWithInnerTypeAnnotation.tsx'
         );
