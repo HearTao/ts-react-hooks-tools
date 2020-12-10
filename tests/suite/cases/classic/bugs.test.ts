@@ -267,4 +267,42 @@ suite('Regression test', async () => {
             'const value = React.useMemo(() => 1 + 2 + 3, []);'
         );
     });
+
+    test('Should work with #92', async () => {
+        const file = projectFile('cases/bugs/shouldWorkWithOptionalChains.tsx');
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = React.useMemo(() => 1 + props.value?.foo ?? 0, [props.value?.foo]);'
+        );
+    });
+
+    test('Should work with #91', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithElementAccessWithLocalArgExpression.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const foo = React.useCallback((v: keyof Props['value']) => {
+                console.log(props.value[v]);
+            }, [props.value]);
+        `
+        );
+    });
 });

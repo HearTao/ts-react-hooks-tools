@@ -410,11 +410,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 factory.createArrayLiteralExpression(
                     deps.map(
                         dep =>
-                            cloneDeep(
-                                this.typescript,
-                                dep,
-                                this.logger
-                            ) as DependExpression
+                            cloneDeep(this.typescript, dep) as DependExpression
                     ),
                     false
                 )
@@ -480,11 +476,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 factory.createArrayLiteralExpression(
                     deps.map(
                         dep =>
-                            cloneDeep(
-                                this.typescript,
-                                dep,
-                                this.logger
-                            ) as DependExpression
+                            cloneDeep(this.typescript, dep) as DependExpression
                     ),
                     false
                 )
@@ -552,7 +544,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         );
 
         visitor(scope);
-        return dummyDeDuplicateDeps(ts, references, logger);
+        return dummyDeDuplicateDeps(ts, references);
 
         function visitor(node: ts.Node) {
             if (ts.isTypeNode(node)) {

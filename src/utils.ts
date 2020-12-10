@@ -8,10 +8,10 @@ import {
     Ternary
 } from './types';
 import {
-    assertDef,
     cast,
     first,
     getPackageNameOrNamespaceInNodeModules,
+    isDef,
     isReactText,
     isUseCallback,
     isUseMemo,
@@ -23,7 +23,6 @@ import {
     startsWithIgnoreCase
 } from './helper';
 import { Constants } from './constants';
-import { LanguageServiceLogger } from './logger';
 
 export function getRangeOfPositionOrRange(
     positionOrRange: number | ts.TextRange
@@ -433,6 +432,11 @@ export interface DepSymbolResolver {
     ) => boolean | undefined;
     peekSymbolDefinitelyBeIgnoreInDeps: (rawSymbol: ts.Symbol) => boolean;
     alreadyDuplicated: (rawSymbol: ts.Symbol) => boolean;
+    isExpressionContainsDeclaredInner: (expr: ts.Node) => boolean | undefined;
+    markExpressionContainsDeclaredInner: (
+        expr: ts.Node,
+        value: boolean
+    ) => void;
 }
 
 export function isInTypeContext(typescript: typeof ts, node: ts.Node) {
@@ -447,18 +451,90 @@ export function createDepSymbolResolver(
     checker: ts.TypeChecker
 ): DepSymbolResolver {
     const cached = new Map<ts.Symbol, boolean>();
+    const accessExpressionContainsInnerCached = new Map<ts.Node, boolean>();
 
     return {
         shouldSymbolDefinitelyBeIgnoreInDeps,
         alreadyDuplicated,
-        peekSymbolDefinitelyBeIgnoreInDeps
+        peekSymbolDefinitelyBeIgnoreInDeps,
+        isExpressionContainsDeclaredInner,
+        markExpressionContainsDeclaredInner
     };
 
-    function peekSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
+    function isWellKnownGlobalSymbol(symbol: ts.Symbol) {
+        return (
+            checker.isUndefinedSymbol(symbol) ||
+            checker.isArgumentsSymbol(symbol)
+        );
+    }
+
+    function markExpressionContainsDeclaredInner(
+        expr: ts.Node,
+        value: boolean
+    ) {
+        if (accessExpressionContainsInnerCached.has(expr)) {
+            return;
+        }
+        accessExpressionContainsInnerCached.set(expr, value);
+    }
+
+    function isDeclarationContainsInner(valueDeclaration: ts.Declaration) {
+        if (valueDeclaration.getSourceFile() !== file) {
+            return false;
+        }
+
+        if (typescript.rangeContainsRange(scope, valueDeclaration)) {
+            return true;
+        }
+
         if (
-            checker.isUndefinedSymbol(rawSymbol) ||
-            checker.isArgumentsSymbol(rawSymbol)
+            additionalScope.some(s =>
+                typescript.rangeContainsRange(s, valueDeclaration)
+            )
         ) {
+            return true;
+        }
+        return false;
+    }
+
+    function isExpressionContainsDeclaredInner(expr: ts.Node) {
+        return visitor(expr);
+
+        function visitor(node: ts.Node): boolean | undefined {
+            if (!accessExpressionContainsInnerCached.has(node)) {
+                if (typescript.isTypeNode(node)) {
+                    return undefined;
+                }
+
+                if (typescript.isIdentifier(node)) {
+                    const rawSymbol = checker.getSymbolAtLocation(node);
+                    const symbol =
+                        rawSymbol &&
+                        skipSymbolAlias(typescript, rawSymbol, checker);
+                    if (
+                        symbol &&
+                        !isWellKnownGlobalSymbol(symbol) &&
+                        symbol.valueDeclaration
+                    ) {
+                        const result = isDeclarationContainsInner(
+                            symbol.valueDeclaration
+                        );
+                        accessExpressionContainsInnerCached.set(node, result);
+                        return result;
+                    }
+                    accessExpressionContainsInnerCached.set(node, false);
+                    return false;
+                }
+                const result = typescript.forEachChild(node, visitor);
+                accessExpressionContainsInnerCached.set(node, !!result);
+                return result;
+            }
+            return accessExpressionContainsInnerCached.get(node);
+        }
+    }
+
+    function peekSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {
+        if (isWellKnownGlobalSymbol(rawSymbol)) {
             return true;
         }
 
@@ -482,15 +558,7 @@ export function createDepSymbolResolver(
             return true;
         }
 
-        if (typescript.rangeContainsRange(scope, valueDeclaration)) {
-            return true;
-        }
-
-        if (
-            additionalScope.some(s =>
-                typescript.rangeContainsRange(s, valueDeclaration)
-            )
-        ) {
+        if (isDeclarationContainsInner(valueDeclaration)) {
             return true;
         }
 
@@ -547,28 +615,27 @@ export function isFunctionExpressionLike(
     );
 }
 
-export function cloneDeep(
-    typescript: typeof ts,
-    v: ts.Node,
-    logger: LanguageServiceLogger
-): ts.Node {
+const syntheticalPos: ts.TextRange = {
+    pos: -1,
+    end: -1
+} as const;
+
+export function cloneDeep(typescript: typeof ts, v: ts.Node): ts.Node {
     const result = typescript.transform(v, [
         conext => {
             return node => visitor(node);
             function visitor(node: ts.Node): ts.Node {
                 const clonsedNode = typescript.setTextRange(
                     typescript.factory.cloneNode(node),
-                    {
-                        pos: -1,
-                        end: -1
-                    }
+                    syntheticalPos
                 );
                 return (
                     typescript.visitEachChild(
                         clonsedNode,
                         visitor,
                         conext,
-                        visitNodes
+                        visitNodes,
+                        tokenVisitor
                     ) ?? clonsedNode
                 );
             }
@@ -587,6 +654,13 @@ export function cloneDeep(
             !nodes?.length
                 ? []
                 : typescript.visitNodes(nodes, visitor, test, start, count)
+        );
+    }
+
+    function tokenVisitor(token: ts.Node): ts.Node {
+        return typescript.setTextRange(
+            typescript.factory.cloneNode(token),
+            syntheticalPos
         );
     }
 }
@@ -745,12 +819,10 @@ function alreadyContainsReactHooks(
     node: ts.Node,
     checker: ts.TypeChecker
 ): boolean {
-    let maybeHooks = false;
-    visitor(node);
-
+    const maybeHooks = visitor(node);
     return !!maybeHooks;
 
-    function visitor(child: ts.Node) {
+    function visitor(child: ts.Node): boolean | undefined {
         if (typescript.isCallExpression(child)) {
             const expression = typescript.skipParentheses(child.expression);
             const dummyCheckResult = dummyCheckReactHooks(
@@ -759,17 +831,15 @@ function alreadyContainsReactHooks(
             );
             const symbol = checker.getSymbolAtLocation(expression);
             if (!symbol) {
-                maybeHooks ||= dummyCheckResult;
                 return dummyCheckResult;
             } else if (
                 dummyCheckResult &&
                 isReactHooks(typescript, symbol, checker)
             ) {
-                maybeHooks ||= true;
                 return true;
             }
         }
-        typescript.forEachChild(child, visitor);
+        return typescript.forEachChild(child, visitor);
     }
 }
 
@@ -1040,10 +1110,25 @@ export function splitDependExpression(
     return result;
 }
 
+export function splitAccessExpression(
+    typescript: typeof ts,
+    access: ts.AccessExpression
+) {
+    const result: ts.Expression[] = [];
+    while (true) {
+        result.unshift(access);
+        if (!typescript.isAccessExpression(access.expression)) {
+            result.unshift(access.expression);
+            break;
+        }
+        access = access.expression;
+    }
+    return result as [ts.Expression, ...ts.AccessExpression[]];
+}
+
 export function dummyDeDuplicateDeps(
     typescript: typeof ts,
-    deps: DependExpression[],
-    logger: LanguageServiceLogger
+    deps: DependExpression[]
 ): DependExpression[] {
     const splited = deps.map(
         dep => [splitDependExpression(typescript, dep), dep] as const
@@ -1108,18 +1193,26 @@ export function shouldExpressionInDeps(
                 return Ternary.False;
             }
 
-            let topLevelAccessExpression: ts.Expression =
-                accessExpression.expression;
-            while (typescript.isAccessExpression(topLevelAccessExpression)) {
-                topLevelAccessExpression = topLevelAccessExpression.expression;
-            }
-            const topLevelSymbol = checker.getSymbolAtLocation(
-                topLevelAccessExpression
+            const splitedAccessExpressions = splitAccessExpression(
+                typescript,
+                accessExpression
             );
-            if (
-                topLevelSymbol &&
-                resolver.peekSymbolDefinitelyBeIgnoreInDeps(topLevelSymbol)
-            ) {
+
+            let i = 0;
+            let containsInnerReference = false;
+            for (let i = 0; i < splitedAccessExpressions.length; ++i) {
+                const expr = splitedAccessExpressions[i];
+                if (resolver.isExpressionContainsDeclaredInner(expr)) {
+                    containsInnerReference = true;
+                    break;
+                }
+            }
+            for (let i = 0; i < splitedAccessExpressions.length; ++i) {
+                const expr = splitedAccessExpressions[i];
+                resolver.markExpressionContainsDeclaredInner(expr, true);
+            }
+
+            if (containsInnerReference) {
                 return Ternary.False;
             }
 
