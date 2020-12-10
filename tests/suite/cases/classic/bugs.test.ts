@@ -215,4 +215,56 @@ suite('Regression test', async () => {
         `
         );
     });
+
+    test('Should work with #87 - Zero', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithIndexAccessAndCallInZeroArgs.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionInLine(
+            file,
+            editor,
+            7,
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            '{React.useMemo(() => <span>{value()[0]}</span>, [value()[0]])}'
+        );
+    });
+
+    test('Should work with #87 - One', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkWithIndexAccessAndCallInOneArgs.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionInLine(
+            file,
+            editor,
+            7,
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            '{React.useMemo(() => <span>{value(1)[0]}</span>, [value(1)[0]])}'
+        );
+    });
+
+    test('Should work with #88', async () => {
+        const file = projectFile(
+            'cases/bugs/shouldWorkIfComponentMayReturnNull.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseMemoActionDescription
+        );
+        assert.strictEqual(
+            result,
+            'const value = React.useMemo(() => 1 + 2 + 3, []);'
+        );
+    });
 });

@@ -145,7 +145,7 @@ export function isFunctionComponentLike(
     const signature = checker.getSignatureFromDeclaration(node);
     if (signature) {
         const returnType = checker.getReturnTypeOfSignature(signature);
-        if (checker.isTypeAssignableTo(returnType, globalJsxElementType)) {
+        if (checker.isTypeAssignableTo(globalJsxElementType, returnType)) {
             return true;
         }
     }
@@ -547,24 +547,48 @@ export function isFunctionExpressionLike(
     );
 }
 
-export function cloneDeep(typescript: typeof ts, v: ts.Node): ts.Node {
-    return typescript.transform(v, [
+export function cloneDeep(
+    typescript: typeof ts,
+    v: ts.Node,
+    logger: LanguageServiceLogger
+): ts.Node {
+    const result = typescript.transform(v, [
         conext => {
             return node => visitor(node);
-
             function visitor(node: ts.Node): ts.Node {
-                return typescript.setTextRange(
-                    typescript.factory.cloneNode(
-                        typescript.visitEachChild(node, visitor, conext)
-                    ),
+                const clonsedNode = typescript.setTextRange(
+                    typescript.factory.cloneNode(node),
                     {
                         pos: -1,
                         end: -1
                     }
                 );
+                return (
+                    typescript.visitEachChild(
+                        clonsedNode,
+                        visitor,
+                        conext,
+                        visitNodes
+                    ) ?? clonsedNode
+                );
             }
         }
     ]).transformed[0];
+    return result;
+
+    function visitNodes<T extends ts.Node>(
+        nodes: ts.NodeArray<T> | undefined,
+        visitor: ts.Visitor | undefined,
+        test?: (node: ts.Node) => boolean,
+        start?: number,
+        count?: number
+    ): ts.NodeArray<T> {
+        return typescript.factory.createNodeArray(
+            !nodes?.length
+                ? []
+                : typescript.visitNodes(nodes, visitor, test, start, count)
+        );
+    }
 }
 
 export function skipSingleValueDeclaration(
@@ -734,17 +758,16 @@ function alreadyContainsReactHooks(
                 expression
             );
             const symbol = checker.getSymbolAtLocation(expression);
-            if (!symbol)
-                if (!symbol) {
-                    maybeHooks ||= dummyCheckResult;
-                    return dummyCheckResult;
-                } else if (
-                    dummyCheckResult &&
-                    isReactHooks(typescript, symbol, checker)
-                ) {
-                    maybeHooks ||= true;
-                    return true;
-                }
+            if (!symbol) {
+                maybeHooks ||= dummyCheckResult;
+                return dummyCheckResult;
+            } else if (
+                dummyCheckResult &&
+                isReactHooks(typescript, symbol, checker)
+            ) {
+                maybeHooks ||= true;
+                return true;
+            }
         }
         typescript.forEachChild(child, visitor);
     }
