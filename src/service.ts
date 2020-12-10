@@ -410,7 +410,11 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 factory.createArrayLiteralExpression(
                     deps.map(
                         dep =>
-                            cloneDeep(this.typescript, dep) as DependExpression
+                            cloneDeep(
+                                this.typescript,
+                                dep,
+                                this.logger
+                            ) as DependExpression
                     ),
                     false
                 )
@@ -476,7 +480,11 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                 factory.createArrayLiteralExpression(
                     deps.map(
                         dep =>
-                            cloneDeep(this.typescript, dep) as DependExpression
+                            cloneDeep(
+                                this.typescript,
+                                dep,
+                                this.logger
+                            ) as DependExpression
                     ),
                     false
                 )
@@ -603,6 +611,7 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
     isValidJsxFlag() {
         const compilerOptions = this.info.languageServiceHost.getCompilationSettings();
         switch (compilerOptions.jsx) {
+            case this.typescript.JsxEmit.Preserve:
             case this.typescript.JsxEmit.React:
             case this.typescript.JsxEmit.ReactJSX:
             case this.typescript.JsxEmit.ReactJSXDev:
