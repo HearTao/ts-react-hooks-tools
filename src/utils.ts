@@ -8,7 +8,6 @@ import {
     Ternary
 } from './types';
 import {
-    assertDef,
     cast,
     first,
     getPackageNameOrNamespaceInNodeModules,
@@ -23,7 +22,6 @@ import {
     startsWithIgnoreCase
 } from './helper';
 import { Constants } from './constants';
-import { LanguageServiceLogger } from './logger';
 
 export function getRangeOfPositionOrRange(
     positionOrRange: number | ts.TextRange
@@ -547,28 +545,27 @@ export function isFunctionExpressionLike(
     );
 }
 
-export function cloneDeep(
-    typescript: typeof ts,
-    v: ts.Node,
-    logger: LanguageServiceLogger
-): ts.Node {
+const syntheticalPos: ts.TextRange = {
+    pos: -1,
+    end: -1
+} as const;
+
+export function cloneDeep(typescript: typeof ts, v: ts.Node): ts.Node {
     const result = typescript.transform(v, [
         conext => {
             return node => visitor(node);
             function visitor(node: ts.Node): ts.Node {
                 const clonsedNode = typescript.setTextRange(
                     typescript.factory.cloneNode(node),
-                    {
-                        pos: -1,
-                        end: -1
-                    }
+                    syntheticalPos
                 );
                 return (
                     typescript.visitEachChild(
                         clonsedNode,
                         visitor,
                         conext,
-                        visitNodes
+                        visitNodes,
+                        tokenVisitor
                     ) ?? clonsedNode
                 );
             }
@@ -587,6 +584,13 @@ export function cloneDeep(
             !nodes?.length
                 ? []
                 : typescript.visitNodes(nodes, visitor, test, start, count)
+        );
+    }
+
+    function tokenVisitor(token: ts.Node): ts.Node {
+        return typescript.setTextRange(
+            typescript.factory.cloneNode(token),
+            syntheticalPos
         );
     }
 }
@@ -1042,8 +1046,7 @@ export function splitDependExpression(
 
 export function dummyDeDuplicateDeps(
     typescript: typeof ts,
-    deps: DependExpression[],
-    logger: LanguageServiceLogger
+    deps: DependExpression[]
 ): DependExpression[] {
     const splited = deps.map(
         dep => [splitDependExpression(typescript, dep), dep] as const
