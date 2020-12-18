@@ -58,6 +58,10 @@ export function isUseSomething(s: string) {
     return startsWithIgnoreCase(s, Constants.UsePrefix);
 }
 
+export function isUseReducer(s: string) {
+    return compareIgnoreCase(s, Constants.UseReducer);
+}
+
 export function isUseRef(s: string) {
     return compareIgnoreCase(s, Constants.UseRef);
 }
@@ -83,4 +87,8 @@ export function cast<T, U extends T>(v: T, cb: (a: T) => a is U): U {
         throw new Error('Invalid cast');
     }
     return v;
+}
+
+export function isStartWithSet(s: string) {
+    return startsWithIgnoreCase(s, Constants.SetPrefix);
 }

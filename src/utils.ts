@@ -13,14 +13,15 @@ import {
     getPackageNameOrNamespaceInNodeModules,
     isDef,
     isReactText,
+    isStartWithSet,
     isUseCallback,
     isUseMemo,
+    isUseReducer,
     isUseRef,
     isUseSomething,
     isUseState,
     relativePathContainNodeModules,
-    returnTrue,
-    startsWithIgnoreCase
+    returnTrue
 } from './helper';
 import { Constants } from './constants';
 
@@ -337,9 +338,11 @@ export function isDeclarationAssignedByUseRef(
     return isDeclarationAssignedByReactHooks(typescript, declaration, isUseRef);
 }
 
-export function isDeclarationAssignedByUseState(
+function isDeclarationAssignedBySecondDestruction(
     typescript: typeof ts,
-    declaration: ts.Declaration
+    declaration: ts.Declaration,
+    namePred: (s: string) => boolean,
+    pred = isUseSomething
 ) {
     if (
         typescript.isBindingElement(declaration) &&
@@ -351,15 +354,39 @@ export function isDeclarationAssignedByUseState(
         const name = declaration.propertyName ?? declaration.name;
         return (
             typescript.isIdentifier(name) &&
-            startsWithIgnoreCase(name.text, Constants.SetPrefix) &&
+            namePred(name.text) &&
             isDeclarationAssignedByReactHooks(
                 typescript,
                 declaration.parent.parent,
-                isUseState
+                pred
             )
         );
     }
     return false;
+}
+
+export function isDeclarationAssignedByUseState(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    return isDeclarationAssignedBySecondDestruction(
+        typescript,
+        declaration,
+        isStartWithSet,
+        isUseState
+    );
+}
+
+export function isDeclarationAssignedByUseReducer(
+    typescript: typeof ts,
+    declaration: ts.Declaration
+) {
+    return isDeclarationAssignedBySecondDestruction(
+        typescript,
+        declaration,
+        returnTrue,
+        isUseReducer
+    );
 }
 
 export function isDeclarationAssignedByConstantsUseMemo(
@@ -565,6 +592,7 @@ export function createDepSymbolResolver(
         if (
             isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
             isDeclarationAssignedByUseState(typescript, valueDeclaration) ||
+            isDeclarationAssignedByUseReducer(typescript, valueDeclaration) ||
             isDeclarationAssignedByConstantsUseMemo(
                 typescript,
                 valueDeclaration

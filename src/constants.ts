@@ -17,6 +17,7 @@ export enum Constants {
     React = 'React',
     ReactModule = 'react',
     UseRef = 'useRef',
+    UseReducer = 'useReducer',
     UseState = 'useState',
     UseMemo = 'useMemo',
     UseCallback = 'useCallback',

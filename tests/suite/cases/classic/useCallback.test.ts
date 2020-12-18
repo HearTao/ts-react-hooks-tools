@@ -193,4 +193,27 @@ suite('Use callback test', async () => {
         `
         );
     });
+
+    test('Should work with use reducer', async () => {
+        const file = projectFile(
+            'cases/useCallback/shouldWorkWithUseReduce.tsx'
+        );
+        const editor = await createTestEditor(file);
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                console.log(123);
+                dispatch({ type: 'decrement' });
+            }, []);
+        `
+        );
+    });
 });
