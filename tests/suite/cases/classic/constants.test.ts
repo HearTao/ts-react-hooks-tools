@@ -21,6 +21,9 @@ suite('Regression test', async () => {
         await vscode.workspace
             .getConfiguration('trht')
             .update('preferFullAccess', true);
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', true);
     });
 
     teardown(async () => {

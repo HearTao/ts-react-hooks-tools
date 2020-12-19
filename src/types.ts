@@ -18,7 +18,8 @@ export type FunctionExpressionLike = MustHaveBody<
 export type DependExpression =
     | ts.Identifier
     | ts.ElementAccessExpression
-    | ts.PropertyAccessExpression;
+    | ts.PropertyAccessExpression
+    | ts.CallExpression;
 
 export interface UseCallbackInfo {
     kind: RefactorKind.useCallback;
@@ -74,4 +75,5 @@ export type HooksReferenceNameType =
 
 export interface SynchronizedConfiguration {
     preferFullAccess?: boolean;
+    preferImmutableCall?: boolean;
 }

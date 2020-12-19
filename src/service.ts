@@ -276,7 +276,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   [],
                   file,
                   checker,
-                  this.configManager.config.preferFullAccess
+                  this.configManager.config.preferFullAccess,
+                  this.configManager.config.preferImmutableCall
               )
             : [];
         const hooksReference = full
@@ -310,7 +311,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   func.parameters,
                   file,
                   checker,
-                  this.configManager.config.preferFullAccess
+                  this.configManager.config.preferFullAccess,
+                  this.configManager.config.preferImmutableCall
               )
             : [];
         const hooksReference = full
@@ -530,7 +532,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         additionalScope: readonly ts.Node[],
         file: ts.SourceFile,
         checker: ts.TypeChecker,
-        preferFullAccess: boolean = true
+        preferFullAccess: boolean = true,
+        preferImmutableCall: boolean = true
     ) {
         const ts = this.typescript;
         const logger = this.logger;
@@ -594,6 +597,29 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                     }
                     return;
                 }
+                case ts.SyntaxKind.CallExpression: {
+                    const callExpression = node as ts.CallExpression;
+                    logger.log(
+                        'Found callExpression: ' + callExpression.getText()
+                    );
+
+                    if (!preferImmutableCall) {
+                        if (
+                            shouldExpressionInDeps(
+                                ts,
+                                callExpression,
+                                checker,
+                                resolver
+                            )
+                        ) {
+                            references.push(callExpression);
+                            return;
+                        }
+                    }
+                    ts.forEachChild(callExpression, visitor);
+                    return;
+                }
+
                 default:
                     ts.forEachChild(node, visitor);
             }

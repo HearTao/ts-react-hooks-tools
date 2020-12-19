@@ -6,6 +6,7 @@ const configurationSection = 'trht';
 
 interface SynchronizedConfiguration {
     preferFullAccess?: boolean;
+    preferImmutableCall?: boolean
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -41,6 +42,7 @@ function getConfiguration(): SynchronizedConfiguration {
     const outConfig: SynchronizedConfiguration = {};
 
     withConfigValue(config, outConfig, 'preferFullAccess');
+    withConfigValue(config, outConfig, 'preferImmutableCall');
 
     return outConfig;
 }

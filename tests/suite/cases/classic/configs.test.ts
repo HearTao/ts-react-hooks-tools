@@ -52,4 +52,38 @@ suite('Config test', async () => {
             .getConfiguration('trht')
             .update('preferFullAccess', true);
     });
+
+    test('Should work with preferImmutableCall', async () => {
+        const file = projectFile('cases/configs/preferImmutableCall.tsx');
+        const editor = await createTestEditor(file);
+
+        assert.notStrictEqual(
+            vscode.workspace
+                .getConfiguration('trht')
+                .get('preferImmutableCall'),
+            false
+        );
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', false);
+
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                console.log(getValue());
+            }, [getValue()]);
+        `
+        );
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', true);
+    });
 });

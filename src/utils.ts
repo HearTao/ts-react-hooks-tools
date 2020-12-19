@@ -11,7 +11,6 @@ import {
     cast,
     first,
     getPackageNameOrNamespaceInNodeModules,
-    isDef,
     isReactText,
     isStartWithSet,
     isUseCallback,
@@ -1286,6 +1285,7 @@ export function splitDependExpression(
     check: while (true) {
         branch: switch (dep.kind) {
             case typescript.SyntaxKind.Identifier:
+            case typescript.SyntaxKind.CallExpression:
                 result.unshift([dep, rightMost]);
                 break check;
             case typescript.SyntaxKind.PropertyAccessExpression:
@@ -1368,12 +1368,12 @@ export function shouldExpressionInDeps(
     typescript: typeof ts,
     expression: DependExpression,
     checker: ts.TypeChecker,
-    resolver: DepSymbolResolver
-) {
+    resolver: DepSymbolResolver,
+    peek?: boolean
+): Ternary {
     switch (expression.kind) {
         case typescript.SyntaxKind.Identifier: {
-            const identifier = expression as ts.Identifier;
-            const symbol = checker.getSymbolAtLocation(identifier);
+            const symbol = checker.getSymbolAtLocation(expression);
             if (symbol) {
                 return shouldSymbolBeIgnore(symbol)
                     ? Ternary.False
@@ -1383,19 +1383,16 @@ export function shouldExpressionInDeps(
         }
         case typescript.SyntaxKind.PropertyAccessExpression:
         case typescript.SyntaxKind.ElementAccessExpression: {
-            const accessExpression = expression as ts.AccessExpression;
-
-            const symbol = checker.getSymbolAtLocation(accessExpression);
+            const symbol = checker.getSymbolAtLocation(expression);
             if (symbol && shouldSymbolBeIgnore(symbol)) {
                 return Ternary.False;
             }
 
             const splitedAccessExpressions = splitAccessExpression(
                 typescript,
-                accessExpression
+                expression
             );
 
-            let i = 0;
             let containsInnerReference = false;
             for (let i = 0; i < splitedAccessExpressions.length; ++i) {
                 const expr = splitedAccessExpressions[i];
@@ -1415,12 +1412,35 @@ export function shouldExpressionInDeps(
 
             return Ternary.Maybe;
         }
+        case typescript.SyntaxKind.CallExpression: {
+            const result =
+                (isDependExpression(typescript, expression.expression) &&
+                    shouldExpressionInDeps(
+                        typescript,
+                        expression.expression,
+                        checker,
+                        resolver,
+                        true
+                    ) &&
+                    !expression.arguments.length) ||
+                expression.arguments.every(
+                    arg =>
+                        isDependExpression(typescript, arg) &&
+                        shouldExpressionInDeps(
+                            typescript,
+                            arg,
+                            checker,
+                            resolver,
+                            true
+                        )
+                );
+            return result ? Ternary.True : Ternary.False;
+        }
     }
 
     function shouldSymbolBeIgnore(symbol: ts.Symbol) {
-        return (
-            resolver.alreadyDuplicated(symbol) ||
-            resolver.shouldSymbolDefinitelyBeIgnoreInDeps(symbol)
-        );
+        return resolver.alreadyDuplicated(symbol) || peek
+            ? resolver.peekSymbolDefinitelyBeIgnoreInDeps(symbol)
+            : resolver.shouldSymbolDefinitelyBeIgnoreInDeps(symbol);
     }
 }

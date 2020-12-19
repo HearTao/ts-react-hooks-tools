@@ -36,6 +36,11 @@
                     "type": "boolean",
                     "description": "Control whether collect access expression dependencies or only identifier",
                     "default": true
+                },
+                "trht.preferImmutableCall": {
+                    "type": "boolean",
+                    "description": "Control whether if collect whole call expression as dependencies",
+                    "default": true
                 }
             }
         }
