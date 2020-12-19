@@ -431,28 +431,6 @@ export function isDeclarationAssignedByConstantsUseCallback(
     );
 }
 
-export function isDeclarationDefinitelyConstants(
-    typescript: typeof ts,
-    declaration: ts.Declaration
-) {
-    if (
-        typescript.isEnumDeclaration(declaration) ||
-        typescript.isEnumMember(declaration)
-    ) {
-        return true;
-    }
-    if (
-        typescript.isVariableDeclaration(declaration) &&
-        typescript.getCombinedNodeFlags(declaration) &
-            typescript.NodeFlags.Const &&
-        declaration.initializer &&
-        typescript.isLiteralExpression(declaration.initializer)
-    ) {
-        return true;
-    }
-    return;
-}
-
 export interface DepSymbolResolver {
     shouldSymbolDefinitelyBeIgnoreInDeps: (
         rawSymbol: ts.Symbol
@@ -505,7 +483,7 @@ export function createDepSymbolResolver(
         accessExpressionContainsInnerCached.set(expr, value);
     }
 
-    function isDeclarationContainsInner(valueDeclaration: ts.Declaration) {
+    function isDeclarationContainsInnerFile(valueDeclaration: ts.Declaration) {
         if (valueDeclaration.getSourceFile() !== file) {
             return false;
         }
@@ -543,7 +521,7 @@ export function createDepSymbolResolver(
                         !isWellKnownGlobalSymbol(symbol) &&
                         symbol.valueDeclaration
                     ) {
-                        const result = isDeclarationContainsInner(
+                        const result = isDeclarationContainsInnerFile(
                             symbol.valueDeclaration
                         );
                         accessExpressionContainsInnerCached.set(node, result);
@@ -585,7 +563,7 @@ export function createDepSymbolResolver(
             return true;
         }
 
-        if (isDeclarationContainsInner(valueDeclaration)) {
+        if (isDeclarationContainsInnerFile(valueDeclaration)) {
             return true;
         }
 
@@ -605,7 +583,7 @@ export function createDepSymbolResolver(
             return true;
         }
 
-        if (isDeclarationDefinitelyConstants(typescript, valueDeclaration)) {
+        if (isDeclarationConstants(valueDeclaration)) {
             return true;
         }
 
@@ -613,6 +591,197 @@ export function createDepSymbolResolver(
             return true;
         }
         return false;
+
+        function isExpressionConstants(node: ts.Expression) {
+            if (typescript.isLiteralExpression(node)) {
+                return true;
+            }
+
+            if (
+                typescript.isParenthesizedExpression(node) ||
+                typescript.isNonNullExpression(node)
+            ) {
+                return isParenExpressionOrNonNullExpressionConstants(node);
+            }
+            if (typescript.isIdentifier(node)) {
+                return isIdentifierConstants(node);
+            }
+            if (typescript.isPropertyAccessExpression(node)) {
+                return isPropertyAccessConstants(node);
+            }
+            if (typescript.isElementAccessExpression(node)) {
+                return isElementAccessConstants(node);
+            }
+            if (typescript.isTemplateExpression(node)) {
+                return isTemplateLiteralConstants(node);
+            }
+            if (typescript.isBinaryExpression(node)) {
+                return isBinaryExpressionConstants(node);
+            }
+            if (
+                typescript.isPrefixUnaryExpression(node) ||
+                typescript.isPostfixUnaryExpression(node)
+            ) {
+                return isUpdateExpressionConstant(node);
+            }
+            if (typescript.isCallExpression(node)) {
+                return isCallExpressionConstants(node);
+            }
+            if (isFunctionExpressionLike(typescript, node)) {
+                return isSimpleFunctionLikeConstants(node);
+            }
+            return false;
+        }
+
+        function isDeclarationConstants(decl: ts.Declaration): boolean {
+            if (
+                typescript.isEnumDeclaration(decl) ||
+                typescript.isEnumMember(decl) ||
+                typescript.isModuleDeclaration(decl)
+            ) {
+                return true;
+            }
+            if (
+                typescript.isVariableDeclaration(decl) &&
+                typescript.getCombinedNodeFlags(decl) &
+                    typescript.NodeFlags.Const &&
+                decl.initializer &&
+                isExpressionConstants(decl.initializer)
+            ) {
+                return true;
+            }
+            if (isFunctionExpressionLike(typescript, decl)) {
+                return isSimpleFunctionLikeConstants(decl);
+            }
+            return false;
+        }
+
+        function isParenExpressionOrNonNullExpressionConstants(
+            expression: ts.ParenthesizedExpression | ts.NonNullExpression
+        ): boolean {
+            return isExpressionConstants(expression.expression);
+        }
+
+        function isSimpleFunctionLikeConstants(
+            func: FunctionExpressionLike
+        ): boolean {
+            if (func.parameters.length !== 0) {
+                return false;
+            }
+            if (typescript.isBlock(func.body)) {
+                const effectiveStatement = func.body.statements.filter(stmt =>
+                    typescript.isEmptyStatement(stmt)
+                );
+                if (effectiveStatement.length === 1) {
+                    const firstStatement = first(effectiveStatement);
+                    if (
+                        typescript.isReturnStatement(firstStatement) &&
+                        firstStatement.expression
+                    ) {
+                        return isExpressionConstants(firstStatement.expression);
+                    }
+                }
+            } else {
+                return isExpressionConstants(func.body);
+            }
+            return false;
+        }
+
+        function isCallExpressionConstants(call: ts.CallExpression): boolean {
+            if (call.arguments.length) {
+                return false;
+            }
+
+            return isExpressionConstants(call.expression);
+        }
+
+        function isBinaryExpressionConstants(
+            expression: ts.BinaryExpression
+        ): boolean {
+            if (typescript.isAssignmentExpression(expression)) {
+                return false;
+            }
+            return (
+                isExpressionConstants(expression.left) &&
+                isExpressionConstants(expression.right)
+            );
+        }
+
+        function isUpdateExpressionConstant(
+            expression: ts.PrefixUnaryExpression | ts.PostfixUnaryExpression
+        ): boolean {
+            if (
+                expression.operator === typescript.SyntaxKind.PlusPlusToken ||
+                expression.operator === typescript.SyntaxKind.MinusMinusToken
+            ) {
+                return false;
+            }
+            return isExpressionConstants(expression.operand);
+        }
+
+        function isIdentifierImmutable(identifier: ts.Identifier) {
+            return (
+                identifier.text === Constants.UndefinedKeyword &&
+                identifier.originalKeywordKind ===
+                    typescript.SyntaxKind.UndefinedKeyword
+            );
+        }
+
+        function isIdentifierConstants(expression: ts.Identifier): boolean {
+            if (isIdentifierImmutable(expression)) {
+                return true;
+            }
+            const symbol = checker.getSymbolAtLocation(expression);
+            return !!symbol && peekSymbolDefinitelyBeIgnoreInDeps(symbol);
+        }
+
+        function isLiteralImmutable(expression: ts.Expression) {
+            switch (expression.kind) {
+                case typescript.SyntaxKind.StringLiteral:
+                case typescript.SyntaxKind.NoSubstitutionTemplateLiteral:
+                case typescript.SyntaxKind.NumericLiteral:
+                case typescript.SyntaxKind.TrueKeyword:
+                case typescript.SyntaxKind.FalseKeyword:
+                case typescript.SyntaxKind.NullKeyword:
+                case typescript.SyntaxKind.RegularExpressionLiteral:
+                    return true;
+                case typescript.SyntaxKind.Identifier:
+                    return isIdentifierImmutable(expression as ts.Identifier);
+                default:
+                    return false;
+            }
+        }
+
+        function isPropertyAccessConstants(
+            expression: ts.PropertyAccessExpression
+        ): boolean {
+            const symbol = checker.getSymbolAtLocation(expression);
+            if (symbol && peekSymbolDefinitelyBeIgnoreInDeps(symbol)) {
+                return true;
+            }
+            return isLiteralImmutable(expression.expression);
+        }
+
+        function isElementAccessConstants(
+            expression: ts.ElementAccessExpression
+        ): boolean {
+            const symbol = checker.getSymbolAtLocation(expression);
+            if (symbol && peekSymbolDefinitelyBeIgnoreInDeps(symbol)) {
+                return true;
+            }
+            return (
+                isLiteralImmutable(expression.expression) &&
+                isExpressionConstants(expression.argumentExpression)
+            );
+        }
+
+        function isTemplateLiteralConstants(
+            expression: ts.TemplateExpression
+        ): boolean {
+            return expression.templateSpans.every(span =>
+                isExpressionConstants(span.expression)
+            );
+        }
     }
 
     function shouldSymbolDefinitelyBeIgnoreInDeps(rawSymbol: ts.Symbol) {

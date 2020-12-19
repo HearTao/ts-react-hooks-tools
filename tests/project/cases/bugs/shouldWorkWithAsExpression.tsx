@@ -1,7 +1,11 @@
 import * as React from 'react';
 
-export const Comp: React.FC = () => {
-    const v = 1 + 2 + 3;
+interface IProps {
+    value: number;
+}
+
+export const Comp: React.FC<IProps> = props => {
+    const v = 1 + 2 + 3 + props.value;
 
     /*[a]*/ const value = v as 6; /*[b]*/
 
