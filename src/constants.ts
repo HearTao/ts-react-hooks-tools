@@ -22,5 +22,6 @@ export enum Constants {
     UseMemo = 'useMemo',
     UseCallback = 'useCallback',
     NodeModules = 'node_modules',
-    UndefinedKeyword = 'undefined'
+    UndefinedKeyword = 'undefined',
+    ConstKeyword = 'const'
 }

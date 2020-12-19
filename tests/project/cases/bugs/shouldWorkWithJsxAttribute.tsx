@@ -1,7 +1,11 @@
 import * as React from 'react';
 
-export const Comp: React.FC = () => {
-    const id = 'id' + Math.random();
+interface IProps {
+    value: number;
+}
+
+export const Comp: React.FC<IProps> = props => {
+    const id = 'id' + props.value;
 
     return (
         <div>

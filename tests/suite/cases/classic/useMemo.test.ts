@@ -63,7 +63,7 @@ suite('Use memo test', async () => {
         const result = await executeAndCompareCodeActionInLine(
             file,
             editor,
-            7,
+            11,
             wrapIntoUseMemoActionDescription
         );
         assert.strictEqual(

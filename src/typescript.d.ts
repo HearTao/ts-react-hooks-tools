@@ -25,7 +25,12 @@ declare module 'typescript/lib/tsserverlibrary' {
     ): number;
     export function isExpressionNode(node: Node): boolean;
     export function isAccessExpression(node: Node): node is AccessExpression;
-    export function isPartOfTypeNode(node: Node): boolean;
+    export function isDeclaration(node: Node): node is Declaration;
+    export function isPartOfTypeNode(node: Node): node is NamedDeclaration;
+    export function isAssignmentExpression(
+        node: Node,
+        excludeCompoundAssignment?: boolean
+    ): node is AssignmentExpression<EqualsToken>;
     export function skipParentheses(node: Expression): Expression;
     export function skipParentheses(node: Node): Node;
     export function isPartOfTypeQuery(node: Node): boolean;

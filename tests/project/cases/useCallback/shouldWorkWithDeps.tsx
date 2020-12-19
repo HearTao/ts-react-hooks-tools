@@ -1,7 +1,11 @@
 import * as React from 'react';
 
-export const Comp: React.FC = () => {
-    const value = 1 + 2 + 3;
+interface IProps {
+    value: number;
+}
+
+export const Comp: React.FC<IProps> = props => {
+    const value = 1 + 2 + 3 + props.value;
 
     const [state] = React.useState(0);
 
