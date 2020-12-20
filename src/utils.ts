@@ -917,6 +917,7 @@ export function splitDependExpression(
     check: while (true) {
         branch: switch (dep.kind) {
             case typescript.SyntaxKind.Identifier:
+            case typescript.SyntaxKind.CallExpression:
                 result.unshift([dep, rightMost]);
                 break check;
             case typescript.SyntaxKind.PropertyAccessExpression:
@@ -1000,11 +1001,10 @@ export function shouldExpressionInDeps(
     expression: DependExpression,
     checker: ts.TypeChecker,
     resolver: DepSymbolResolver
-) {
+): Ternary {
     switch (expression.kind) {
         case typescript.SyntaxKind.Identifier: {
-            const identifier = expression as ts.Identifier;
-            const symbol = checker.getSymbolAtLocation(identifier);
+            const symbol = checker.getSymbolAtLocation(expression);
             if (symbol) {
                 const result =
                     resolver.alreadyDuplicated(symbol) ||
@@ -1034,10 +1034,9 @@ export function shouldExpressionInDeps(
 
             const splitedAccessExpressions = splitAccessExpression(
                 typescript,
-                accessExpression
+                expression
             );
 
-            let i = 0;
             let containsInnerReference = false;
             for (let i = 0; i < splitedAccessExpressions.length; ++i) {
                 const expr = splitedAccessExpressions[i];
@@ -1056,6 +1055,38 @@ export function shouldExpressionInDeps(
             }
 
             return Ternary.Maybe;
+        }
+        case typescript.SyntaxKind.CallExpression: {
+            if (
+                (isDependExpression(typescript, expression.expression) &&
+                    !shouldExpressionInDeps(
+                        typescript,
+                        expression.expression,
+                        checker,
+                        resolver
+                    )) ||
+                resolver.isExpressionContainsDeclaredInner(
+                    expression.expression
+                )
+            ) {
+                return Ternary.False;
+            }
+            const result =
+                !expression.arguments.length ||
+                expression.arguments.every(arg => {
+                    return (
+                        (isDependExpression(typescript, arg) &&
+                            shouldExpressionInDeps(
+                                typescript,
+                                arg,
+                                checker,
+                                resolver
+                            )) ||
+                        !resolver.isExpressionContainsDeclaredInner(arg)
+                    );
+                });
+
+            return result ? Ternary.True : Ternary.False;
         }
     }
 }

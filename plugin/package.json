@@ -3,7 +3,7 @@
     "displayName": "Typescript React hooks Tools",
     "description": "Useful refactor of React hooks with TypeScript.",
     "publisher": "kingwl",
-    "version": "0.1.15",
+    "version": "0.1.16",
     "license": "MIT",
     "icon": "img/logo.png",
     "repository": {
@@ -36,6 +36,11 @@
                 "trht.preferFullAccess": {
                     "type": "boolean",
                     "description": "Control whether collect access expression dependencies or only identifier",
+                    "default": true
+                },
+                "trht.preferImmutableCall": {
+                    "type": "boolean",
+                    "description": "Control whether if collect whole call expression as dependencies",
                     "default": true
                 }
             }

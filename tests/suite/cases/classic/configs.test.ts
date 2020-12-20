@@ -52,4 +52,73 @@ suite('Config test', async () => {
             .getConfiguration('trht')
             .update('preferFullAccess', true);
     });
+
+    test('Should work with preferImmutableCall', async () => {
+        const file = projectFile('cases/configs/preferImmutableCall1.tsx');
+        const editor = await createTestEditor(file);
+
+        assert.notStrictEqual(
+            vscode.workspace
+                .getConfiguration('trht')
+                .get('preferImmutableCall'),
+            false
+        );
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', false);
+
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                console.log(getValue(props.value));
+            }, [getValue(props.value)]);
+        `
+        );
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', true);
+    });
+
+    test('Should work with preferImmutableCall - inner reference', async () => {
+        const file = projectFile('cases/configs/preferImmutableCall2.tsx');
+        const editor = await createTestEditor(file);
+
+        assert.notStrictEqual(
+            vscode.workspace
+                .getConfiguration('trht')
+                .get('preferImmutableCall'),
+            false
+        );
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', false);
+
+        const result = await executeAndCompareCodeActionBewteenLabel(
+            file,
+            editor,
+            'a',
+            'b',
+            wrapIntoUseCallbackActionDescription
+        );
+        normalizedCompare(
+            result,
+            `
+            const onClick = React.useCallback(() => {
+                const v = 1;
+                console.log(getValue(v));
+            }, [getValue]);
+        `
+        );
+        await vscode.workspace
+            .getConfiguration('trht')
+            .update('preferImmutableCall', true);
+    });
 });
