@@ -3,7 +3,7 @@
     "displayName": "Typescript React hooks Tools",
     "description": "Useful refactor of React hooks with TypeScript.",
     "publisher": "kingwl",
-    "version": "0.1.15",
+    "version": "0.1.16",
     "license": "MIT",
     "icon": "img/logo.png",
     "repository": {
