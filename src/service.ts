@@ -26,7 +26,6 @@ import {
     isFunctionExpressionLike,
     functionExpressionLikeToExpression,
     getRangeOfPositionOrRange,
-    createDepSymbolResolver,
     cloneDeep,
     skipSingleValueDeclaration,
     isExpression,
@@ -40,11 +39,11 @@ import {
     createHooksReference,
     skipTriviaExpression,
     dummyDeDuplicateDeps,
-    shouldExpressionInDeps,
-    dummyCheckReactHooks
+    shouldExpressionInDeps
 } from './utils';
 import { isDef } from './helper';
 import { ConfigManager } from './config';
+import { createDepSymbolResolver } from './resolver';
 
 export class CustomizedLanguageService implements ICustomizedLanguageServie {
     constructor(

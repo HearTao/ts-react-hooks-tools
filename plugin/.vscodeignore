@@ -13,3 +13,4 @@
 !node_modules/ts-react-hooks-tools/dist/*.js
 !node_modules/ts-react-hooks-tools/package.json
 !./dist/*.js
+!./img/logo.png

@@ -77,3 +77,16 @@ export interface SynchronizedConfiguration {
     preferFullAccess?: boolean;
     preferImmutableCall?: boolean;
 }
+
+export interface DepSymbolResolver {
+    shouldSymbolDefinitelyBeIgnoreInDeps: (
+        rawSymbol: ts.Symbol
+    ) => boolean | undefined;
+    alreadyDuplicated: (rawSymbol: ts.Symbol) => boolean;
+    markAsDuplicated: (symbol: ts.Symbol) => void;
+    isExpressionContainsDeclaredInner: (expr: ts.Node) => boolean | undefined;
+    markExpressionContainsDeclaredInner: (
+        expr: ts.Node,
+        value: boolean
+    ) => void;
+}

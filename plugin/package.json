@@ -5,6 +5,7 @@
     "publisher": "kingwl",
     "version": "0.1.15",
     "license": "MIT",
+    "icon": "img/logo.png",
     "repository": {
         "type": "git",
         "url": "https://github.com/HearTao/ts-react-hooks-tools.git"
