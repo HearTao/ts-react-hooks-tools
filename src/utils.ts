@@ -1000,8 +1000,7 @@ export function shouldExpressionInDeps(
     typescript: typeof ts,
     expression: DependExpression,
     checker: ts.TypeChecker,
-    resolver: DepSymbolResolver,
-    peek?: boolean
+    resolver: DepSymbolResolver
 ): Ternary {
     switch (expression.kind) {
         case typescript.SyntaxKind.Identifier: {
@@ -1058,19 +1057,35 @@ export function shouldExpressionInDeps(
             return Ternary.Maybe;
         }
         case typescript.SyntaxKind.CallExpression: {
-            const result =
+            if (
                 (isDependExpression(typescript, expression.expression) &&
-                    shouldExpressionInDeps(
+                    !shouldExpressionInDeps(
                         typescript,
                         expression.expression,
                         checker,
-                        resolver,
-                        true
-                    ) &&
-                    !expression.arguments.length) ||
-                expression.arguments.every(
-                    arg => !resolver.isExpressionContainsDeclaredInner(arg)
-                );
+                        resolver
+                    )) ||
+                resolver.isExpressionContainsDeclaredInner(
+                    expression.expression
+                )
+            ) {
+                return Ternary.False;
+            }
+            const result =
+                !expression.arguments.length ||
+                expression.arguments.every(arg => {
+                    return (
+                        (isDependExpression(typescript, arg) &&
+                            shouldExpressionInDeps(
+                                typescript,
+                                arg,
+                                checker,
+                                resolver
+                            )) ||
+                        !resolver.isExpressionContainsDeclaredInner(arg)
+                    );
+                });
+
             return result ? Ternary.True : Ternary.False;
         }
     }

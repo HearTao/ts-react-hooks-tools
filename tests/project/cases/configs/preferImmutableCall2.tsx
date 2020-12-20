@@ -5,9 +5,10 @@ interface IProps {
 }
 
 export const Comp: React.FC<IProps> = props => {
-    const getValue = () => props.value;
+    const getValue = (v: number) => props.value + v;
     /*[a]*/ const onClick = () => {
-        console.log(getValue());
+        const v = 1;
+        console.log(getValue(v));
     }; /*[b]*/
 
     return <div onClick={onClick}>Foo</div>;
