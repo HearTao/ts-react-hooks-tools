@@ -1,6 +1,6 @@
 # ts-react-hooks-tools
 
-A tools who provide a series of refactors about react hooks. Build with ❤️.
+A toolkit that provides a series of refactoring tools for React hooks. Build with ❤️.
 
 ### Install
 - [As TypeScript Plugin](https://www.npmjs.com/package/ts-react-hooks-tools)  
