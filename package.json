@@ -11,7 +11,7 @@
     "type": "git",
     "url": "https://github.com/HearTao/ts-react-hooks-tools.git"
   },
-  "version": "0.1.16",
+  "version": "0.1.17",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {

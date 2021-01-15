@@ -276,7 +276,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   file,
                   checker,
                   this.configManager.config.preferFullAccess,
-                  this.configManager.config.preferImmutableCall
+                  this.configManager.config.preferImmutableCall,
+                  this.configManager.config.preferConstantCall
               )
             : [];
         const hooksReference = full
@@ -311,7 +312,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
                   file,
                   checker,
                   this.configManager.config.preferFullAccess,
-                  this.configManager.config.preferImmutableCall
+                  this.configManager.config.preferImmutableCall,
+                  this.configManager.config.preferConstantCall
               )
             : [];
         const hooksReference = full
@@ -532,7 +534,8 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
         file: ts.SourceFile,
         checker: ts.TypeChecker,
         preferFullAccess: boolean = true,
-        preferImmutableCall: boolean = true
+        preferImmutableCall: boolean = true,
+        preferConstantCall: boolean = true
     ) {
         const ts = this.typescript;
         const logger = this.logger;
@@ -542,7 +545,9 @@ export class CustomizedLanguageService implements ICustomizedLanguageServie {
             scope,
             additionalScope,
             file,
-            checker
+            checker,
+            preferConstantCall,
+            logger
         );
 
         visitor(scope);

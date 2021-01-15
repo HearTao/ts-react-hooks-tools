@@ -13,3 +13,9 @@ export interface CommonUnknownProps {
         foo: any;
     };
 }
+
+let id = 0;
+
+export function getId(): { id: number } {
+    return { id: id++ };
+}
