@@ -3,7 +3,7 @@
     "displayName": "Typescript React hooks Tools",
     "description": "Useful refactor of React hooks with TypeScript.",
     "publisher": "kingwl",
-    "version": "0.1.16",
+    "version": "0.1.17",
     "license": "MIT",
     "icon": "img/logo.png",
     "repository": {
@@ -41,6 +41,11 @@
                 "trht.preferImmutableCall": {
                     "type": "boolean",
                     "description": "Control whether if collect whole call expression as dependencies",
+                    "default": true
+                },
+                "trht.preferConstantCall": {
+                    "type": "boolean",
+                    "description": "Control whether if assume call expression is constants",
                     "default": true
                 }
             }

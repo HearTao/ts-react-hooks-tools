@@ -1,6 +1,7 @@
 import type * as ts from 'typescript/lib/tsserverlibrary';
 import { Constants } from './constants';
-import { first } from './helper';
+import { cast, first } from './helper';
+import { LanguageServiceLogger } from './logger';
 import { DepSymbolResolver, FunctionExpressionLike } from './types';
 import {
     isDeclarationAssignedByConstantsUseCallback,
@@ -22,7 +23,9 @@ export function createDepSymbolResolver(
     scope: ts.Node,
     additionalScope: readonly ts.Node[],
     file: ts.SourceFile,
-    checker: ts.TypeChecker
+    checker: ts.TypeChecker,
+    preferConstantsCall: boolean,
+    logger: LanguageServiceLogger
 ): DepSymbolResolver {
     const cached = new Map<ts.Symbol, boolean>();
     const duplicated = new Set<ts.Symbol>();
@@ -118,6 +121,7 @@ export function createDepSymbolResolver(
         if (!valueDeclaration) {
             return false;
         }
+        logger.log('WTF 3');
 
         const declFile = valueDeclaration.getSourceFile();
         if (declFile.isDeclarationFile) {
@@ -128,6 +132,7 @@ export function createDepSymbolResolver(
         if (inTypeContext) {
             return false;
         }
+        logger.log('WTF 4');
 
         if (declFile !== file) {
             return true;
@@ -136,6 +141,7 @@ export function createDepSymbolResolver(
         if (isDeclarationContainsInnerFile(valueDeclaration)) {
             return true;
         }
+        logger.log('WTF 5');
 
         if (
             isDeclarationAssignedByUseRef(typescript, valueDeclaration) ||
@@ -152,14 +158,17 @@ export function createDepSymbolResolver(
         ) {
             return true;
         }
+        logger.log('WTF 6');
 
         if (isDeclarationConstants(valueDeclaration)) {
             return true;
         }
+        logger.log('WTF 7');
 
         if (isTopLevelConstantDeclaration(typescript, valueDeclaration)) {
             return true;
         }
+        logger.log('WTF 8');
         return false;
 
         function isExpressionConstants(node: ts.Expression) {
@@ -258,10 +267,18 @@ export function createDepSymbolResolver(
         }
 
         function isCallExpressionConstants(call: ts.CallExpression): boolean {
-            if (call.arguments.length) {
+            logger.log('isCallExpressionConstants: ' + call.getText(file));
+            logger.log('isCallExpressionConstants: ' + preferConstantsCall);
+            if (!preferConstantsCall) {
                 return false;
             }
 
+            logger.log('isCallExpressionConstants: ' + 'check arguments');
+            if (!call.arguments.every(isExpressionConstants)) {
+                return false;
+            }
+
+            logger.log('isCallExpressionConstants: ' + 'check expression');
             return isExpressionConstants(call.expression);
         }
 

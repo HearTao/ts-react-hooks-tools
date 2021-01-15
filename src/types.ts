@@ -76,6 +76,7 @@ export type HooksReferenceNameType =
 export interface SynchronizedConfiguration {
     preferFullAccess?: boolean;
     preferImmutableCall?: boolean;
+    preferConstantCall?: boolean;
 }
 
 export interface DepSymbolResolver {

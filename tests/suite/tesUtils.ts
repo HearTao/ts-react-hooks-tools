@@ -382,3 +382,14 @@ export function normalizeIndent(str: string) {
 export function normalizedCompare(a: string, b: string) {
     assert.strictEqual(normalizeIndent(a), normalizeIndent(b));
 }
+
+export async function runInFlagContext(
+    flag: string,
+    value: any,
+    cb: () => void | Promise<void>
+) {
+    const savedValue = vscode.workspace.getConfiguration('trht').get(flag);
+    await vscode.workspace.getConfiguration('trht').update(flag, value);
+    await cb();
+    await vscode.workspace.getConfiguration('trht').update(flag, savedValue);
+}
